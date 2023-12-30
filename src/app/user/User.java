@@ -1,5 +1,6 @@
 package app.user;
 
+import app.Admin;
 import app.audio.Collections.AudioCollection;
 import app.audio.Collections.Playlist;
 import app.audio.Collections.PlaylistOutput;
@@ -47,6 +48,13 @@ public final class User extends UserAbstract {
     private LikedContentPage likedContentPage;
     private Subscribe subscribes;
     private int lastNotifiedTime;
+    private List<Merchandise> merches;
+
+    @Getter
+    private ArrayList<Song> songsRecommendations;
+    @Getter
+    private ArrayList<Playlist> playlistsRecommendations;
+
 
 
     public ArrayList<Playlist> getPlaylists() {
@@ -76,7 +84,7 @@ public final class User extends UserAbstract {
         return homePage;
     }
 
-    public void setCurrentPage(Page currentPage) {
+    public void setCurrentPage(final Page currentPage) {
         this.currentPage = currentPage;
     }
 
@@ -88,16 +96,33 @@ public final class User extends UserAbstract {
         return subscribes;
     }
 
-    public void setSubscribes(Subscribe subscribes) {
-        this.subscribes = subscribes;
-    }
-
     public int getLastNotifiedTime() {
         return lastNotifiedTime;
     }
 
-    public void setLastNotifiedTime(int lastNotifiedTime) {
+    public void setLastNotifiedTime(final int lastNotifiedTime) {
         this.lastNotifiedTime = lastNotifiedTime;
+    }
+
+    public List<Merchandise> getMerches() {
+        return merches;
+    }
+
+
+    public ArrayList<Song> getSongsRecommendations() {
+        return songsRecommendations;
+    }
+
+    public void setSongsRecommendations(final ArrayList<Song> songsRecommendations) {
+        this.songsRecommendations = songsRecommendations;
+    }
+
+    public ArrayList<Playlist> getPlaylistsRecommendations() {
+        return playlistsRecommendations;
+    }
+
+    public void setPlaylistsRecommendations(final ArrayList<Playlist> playlistsRecommendations) {
+        this.playlistsRecommendations = playlistsRecommendations;
     }
 
     /**
@@ -112,6 +137,8 @@ public final class User extends UserAbstract {
         playlists = new ArrayList<>();
         likedSongs = new ArrayList<>();
         followedPlaylists = new ArrayList<>();
+        songsRecommendations = new ArrayList<>();
+        playlistsRecommendations = new ArrayList<>();
         player = new Player();
         searchBar = new SearchBar(username);
         lastSearched = false;
@@ -121,6 +148,8 @@ public final class User extends UserAbstract {
         currentPage = homePage;
         likedContentPage = new LikedContentPage(this);
         subscribes = new Subscribe();
+        merches = new ArrayList<>();
+
     }
 
     @Override
@@ -220,6 +249,20 @@ public final class User extends UserAbstract {
         searchBar.clearSelection();
 
         player.pause();
+
+        // update the number of Plays of an artist
+        if (player.getType().equals("song")) {
+            for (Song song : Admin.getInstance().getSongs()) {
+                if (song.getName().equals(player.getCurrentAudioFile().getName())) {
+                    String artistName = song.getArtist();
+                    for (Artist artist: Admin.getInstance().getArtists()) {
+                        if (artist.getUsername().equals(artistName)) {
+                            artist.setNoPlays(artist.getNoPlays() + 1);
+                        }
+                    }
+                }
+            }
+        }
 
         return "Playback loaded successfully.";
     }

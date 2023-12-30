@@ -15,6 +15,11 @@ public final class Artist extends ContentCreator {
     private ArrayList<Album> albums;
     private ArrayList<Merchandise> merch;
     private ArrayList<Event> events;
+    private Double merchRevenue;
+    private Double songRevenue;
+    private int ranking;
+    private String mostProfitableSong;
+    private int noPlays;
 
     /**
      * Instantiates a new Artist.
@@ -28,7 +33,11 @@ public final class Artist extends ContentCreator {
         albums = new ArrayList<>();
         merch = new ArrayList<>();
         events = new ArrayList<>();
-
+        merchRevenue = 0.0;
+        songRevenue = 0.0;
+        mostProfitableSong = "N/A";
+        ranking = 1;
+        noPlays = 0;
         super.setPage(new ArtistPage(this));
     }
 
@@ -124,5 +133,50 @@ public final class Artist extends ContentCreator {
      */
     public String userType() {
         return "artist";
+    }
+    public Double getMerchRevenue() {
+        return merchRevenue;
+    }
+
+    public void setMerchRevenue(final Double merchRevenue) {
+        this.merchRevenue = merchRevenue;
+    }
+
+    public Double getSongRevenue() {
+        return songRevenue;
+    }
+
+    public void setSongRevenue(final Double songRevenue) {
+        this.songRevenue = songRevenue;
+    }
+
+    public int getRanking() {
+        return ranking;
+    }
+
+    public void setRanking(final int ranking) {
+        this.ranking = ranking;
+    }
+
+    public String getMostProfitableSong() {
+        return mostProfitableSong;
+    }
+
+    public void setMostProfitableSong(final String mostProfitableSong) {
+        this.mostProfitableSong = mostProfitableSong;
+    }
+    public void addMerchRevenue(final Double price) {
+        merchRevenue += price;
+    }
+    public void addSongRevenue(final Double price) {
+        songRevenue += price;
+    }
+
+    public int getNoPlays() {
+        return noPlays;
+    }
+
+    public void setNoPlays(final int noPlays) {
+        this.noPlays = noPlays;
     }
 }

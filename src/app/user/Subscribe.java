@@ -15,15 +15,8 @@ public final class Subscribe {
         return names;
     }
 
-    public void setNames(List<String> names) {
-        this.names = names;
-    }
-
     public List<Notification> getNotifications() {
         return notifications;
     }
 
-    public void setNotifications(List<Notification> notifications) {
-        this.notifications = notifications;
-    }
 }

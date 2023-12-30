@@ -9,12 +9,12 @@ import app.user.Artist;
 import app.user.Host;
 import app.user.Notification;
 import app.user.User;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * The type Command runner.
@@ -810,11 +810,69 @@ public final class CommandRunner {
 
         return objectNode;
     }
-    public static ObjectNode endProgram() {
+
+    public static ObjectNode buyMerch(final CommandInput commandInput) {
+        String message = Admin.getInstance().buyMerch(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
-        List<String> result = new ArrayList<>();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode seeMerch(final CommandInput commandInput) {
+        List<String> result = Admin.getInstance().seeMerch(commandInput);
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("result", objectMapper.valueToTree(result));
+
+        return objectNode;
+    }
+
+    public static ObjectNode updateRecommendations(final CommandInput commandInput) {
+        String message = Admin.getInstance().updateRecommendations(commandInput);
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+
+    public static ObjectNode endProgram() {
+        Map<String, Map<String, Object>> result = new HashMap<>();
+        List<Artist> artists = new ArrayList<>(Admin.getInstance().getArtists());
+        // sort the artists given their total amount of money
+
+        Comparator<Artist> artistComparator = Comparator
+                .comparing(Artist::getMerchRevenue)
+                .reversed()
+                .thenComparing(Comparator.comparing(Artist::getUsername));
+        Collections.sort(artists, artistComparator);
+        int rankingValue = 1;
+        for (Artist artist : artists) {
+            if(artist.getNoPlays() != 0 || artist.getMerchRevenue() != 0 || artist.getSongRevenue() != 0) {
+                Map<String, Object> artistInfo = new HashMap<>();
+                artistInfo.put("merchRevenue", artist.getMerchRevenue());
+                artistInfo.put("songRevenue", artist.getSongRevenue());
+                artistInfo.put("ranking", rankingValue);
+                rankingValue++;
+                artistInfo.put("mostProfitableSong", artist.getMostProfitableSong());
+                result.put(artist.getUsername(), artistInfo);
+            }
+
+        }
+        ObjectNode objectNode = objectMapper.createObjectNode();
+
         objectNode.put("command", "endProgram");
-        objectNode.put("result", objectMapper.createObjectNode());
+        if (result.isEmpty())
+            objectNode.put("result", objectMapper.createObjectNode());
+        else
+            objectNode.put("result", objectMapper.valueToTree(result));
         return objectNode;
     }
 }

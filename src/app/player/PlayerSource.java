@@ -13,7 +13,7 @@ import java.util.Random;
 /**
  * The type Player source.
  */
-public class PlayerSource {
+public final class PlayerSource {
     @Getter
     private Enums.PlayerSourceType type;
     @Getter

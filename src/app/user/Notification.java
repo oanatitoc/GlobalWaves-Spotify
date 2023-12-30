@@ -1,14 +1,14 @@
 package app.user;
 
 public final class Notification {
-    String name;
-    String description;
+    private String name;
+    private String description;
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(final String name) {
         this.name = name;
     }
 
@@ -16,10 +16,10 @@ public final class Notification {
         return description;
     }
 
-    public void setDescription(String description) {
+    public void setDescription(final String description) {
         this.description = description;
     }
-    public Notification(String name, String description) {
+    public Notification(final String name, final String description) {
         this.name = name;
         this.description = description;
     }

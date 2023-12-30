@@ -192,10 +192,6 @@ public final class CommandInput {
         return recommendationType;
     }
 
-    public void setRecommendationType(String recommendationType) {
-        this.recommendationType = recommendationType;
-    }
-
     @Override
     public String toString() {
         return "CommandInput{"

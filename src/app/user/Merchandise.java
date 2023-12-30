@@ -3,7 +3,7 @@ package app.user;
 /**
  * The type Merchandise.
  */
-public class Merchandise {
+public final class Merchandise {
     private String name;
     private String description;
     private int price;
