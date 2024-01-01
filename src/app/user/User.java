@@ -1,15 +1,11 @@
 package app.user;
 
 import app.Admin;
-import app.audio.Collections.AudioCollection;
-import app.audio.Collections.Playlist;
-import app.audio.Collections.PlaylistOutput;
+import app.audio.Collections.*;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Song;
 import app.audio.LibraryEntry;
-import app.pages.HomePage;
-import app.pages.LikedContentPage;
-import app.pages.Page;
+import app.pages.*;
 import app.player.Player;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
@@ -54,6 +50,12 @@ public final class User extends UserAbstract {
     private ArrayList<Song> songsRecommendations;
     @Getter
     private ArrayList<Playlist> playlistsRecommendations;
+
+    private List<Page> pages;
+    private int currentIndex;
+    private LibraryEntry lastRecommendation;
+    private String lastRecommendationType;
+
 
 
 
@@ -125,6 +127,38 @@ public final class User extends UserAbstract {
         this.playlistsRecommendations = playlistsRecommendations;
     }
 
+    public List<Page> getPages() {
+        return pages;
+    }
+
+    public int getCurrentIndex() {
+        return currentIndex;
+    }
+
+    public void setPages(List<Page> pages) {
+        this.pages = pages;
+    }
+
+    public void setCurrentIndex(int currentIndex) {
+        this.currentIndex = currentIndex;
+    }
+
+    public LibraryEntry getLastRecommendation() {
+        return lastRecommendation;
+    }
+
+    public void setLastRecommendation(LibraryEntry lastRecommendation) {
+        this.lastRecommendation = lastRecommendation;
+    }
+
+    public String getLastRecommendationType() {
+        return lastRecommendationType;
+    }
+
+    public void setLastRecommendationType(String lastRecommendationType) {
+        this.lastRecommendationType = lastRecommendationType;
+    }
+
     /**
      * Instantiates a new User.
      *
@@ -149,6 +183,9 @@ public final class User extends UserAbstract {
         likedContentPage = new LikedContentPage(this);
         subscribes = new Subscribe();
         merches = new ArrayList<>();
+        currentIndex = 0;
+        pages = new ArrayList<>();
+        pages.add(this.currentPage);
 
     }
 
@@ -686,5 +723,77 @@ public final class User extends UserAbstract {
         }
 
         player.simulatePlayer(time);
+    }
+
+    public Page findArtistHostPage() {
+        if (player.getCurrentAudioFile() != null || player.getCurrentAudioCollection() != null) {
+            String currentAudioFileName = player.getCurrentAudioFile().getName();
+            // check if current AudioFile is a song
+            for (Song song : Admin.getInstance().getSongs()) {
+                if (song.getName().equals(currentAudioFileName)) {
+                    Artist artist = Admin.getInstance().getArtist(song.getArtist());
+                    System.out.println("hello");
+                    return artist.getPage();
+                }
+            }
+            String currentAudioCollectionName = player.getCurrentAudioCollection().getName();
+            // check if current AudioFile is a podcast
+            for (Podcast podcast : Admin.getInstance().getPodcasts()) {
+                if (podcast.getName().equals(currentAudioCollectionName)) {
+                    Host host = Admin.getInstance().getHost(podcast.getOwner());
+                    return host.getPage();
+                }
+            }
+        }
+        return currentPage;
+    }
+    public void nextPage() {
+        if (currentIndex < pages.size() - 1) {
+            currentIndex++;
+            currentPage = pages.get(currentIndex);
+        }
+    }
+
+    public void previousPage() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            currentPage = pages.get(currentIndex);
+        }
+    }
+    public String loadRecommendations() {
+
+        if (!status) {
+            return "%s is offline.".formatted(getUsername());
+        }
+
+        if (getLastRecommendation() == null) {
+            return "No recommendations available.";
+        }
+
+//        if (!getLastRecommendationType().equals("song")
+//                && ((AudioCollection) getLastRecommendation().getNumberOfTracks() == 0) {
+//            return "You can't load an empty audio collection!";
+//        }
+
+        player.setSource(getLastRecommendation(), getLastRecommendationType());
+        searchBar.clearSelection();
+
+        player.pause();
+
+        // update the number of Plays of an artist
+        if (player.getType().equals("song")) {
+            for (Song song : Admin.getInstance().getSongs()) {
+                if (song.getName().equals(player.getCurrentAudioFile().getName())) {
+                    String artistName = song.getArtist();
+                    for (Artist artist: Admin.getInstance().getArtists()) {
+                        if (artist.getUsername().equals(artistName)) {
+                            artist.setNoPlays(artist.getNoPlays() + 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        return "Playback loaded successfully.";
     }
 }

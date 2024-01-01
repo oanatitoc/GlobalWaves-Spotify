@@ -842,6 +842,38 @@ public final class CommandRunner {
 
         return objectNode;
     }
+    public static ObjectNode previousPage(final CommandInput commandInput) {
+        String message = Admin.getInstance().previousPage(commandInput);
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode nextPage(final CommandInput commandInput) {
+        String message = Admin.getInstance().nextPage(commandInput);
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode loadRecommendations(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        String message = user.loadRecommendations();
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
 
     public static ObjectNode endProgram() {
         Map<String, Map<String, Object>> result = new HashMap<>();

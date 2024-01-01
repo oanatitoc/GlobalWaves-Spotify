@@ -7,6 +7,10 @@ import app.audio.Collections.Podcast;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Episode;
 import app.audio.Files.Song;
+import app.pages.Command;
+import app.pages.NextPage;
+import app.pages.Page;
+import app.pages.PreviousPage;
 import app.player.Player;
 import app.user.*;
 import fileio.input.CommandInput;
@@ -743,10 +747,16 @@ public final class Admin {
         switch (nextPage) {
             case "Home" -> user.setCurrentPage(user.getHomePage());
             case "LikedContent" -> user.setCurrentPage(user.getLikedContentPage());
+            case "Artist", "Host" -> user.setCurrentPage(user.findArtistHostPage());
             default -> {
                 return "%s is trying to access a non-existent page.".formatted(username);
             }
         }
+        // adding the new Page in the list of user's accessed pages
+        List<Page> usersPages = user.getPages();
+        usersPages.add(user.getCurrentPage());
+        user.setPages(usersPages);
+        user.setCurrentIndex(usersPages.size() - 1);
 
         return "%s accessed %s successfully.".formatted(username, nextPage);
     }
@@ -1014,7 +1024,10 @@ public final class Admin {
                             ArrayList<Song> userSongs = user.getSongsRecommendations();
                             userSongs.add(randomSong);
                             user.setSongsRecommendations(userSongs);
+                            user.setLastRecommendation(randomSong);
+                            user.setLastRecommendationType("song");
                         }
+
                         return "The recommendations for user " + user.getUsername() + " have been updated successfully.";
                     }
                 }
@@ -1087,6 +1100,26 @@ public final class Admin {
             ArrayList<Playlist> userPlaylists = user.getPlaylistsRecommendations();
             userPlaylists.add(newPlaylist);
             user.setPlaylistsRecommendations(userPlaylists);
+            user.setLastRecommendation(newPlaylist);
+            user.setLastRecommendationType("playlist");
+            return "The recommendations for user " + user.getUsername() + " have been updated successfully.";
+        }
+        if (commandInput.getRecommendationType().equals("fans_playlist")) {
+            String songName = user.getPlayer().getCurrentAudioFile().getName();
+            String artistName = new String();
+            for (Song song : songs) {
+                if (song.getName().equals(songName)) {
+                    artistName = song.getArtist();
+                }
+            }
+            user.createPlaylist(artistName + " Fan Club recommendations", commandInput.getTimestamp());
+            Playlist newPlaylist = user.getPlaylists().get(user.getPlaylists().size() - 1);
+
+            ArrayList<Playlist> userPlaylists = user.getPlaylistsRecommendations();
+            userPlaylists.add(newPlaylist);
+            user.setPlaylistsRecommendations(userPlaylists);
+            user.setLastRecommendation(newPlaylist);
+            user.setLastRecommendationType("playlist");
             return "The recommendations for user " + user.getUsername() + " have been updated successfully.";
         }
         return null;
@@ -1103,4 +1136,23 @@ public final class Admin {
                 .filter(song -> genre.equals(song.getGenre()))
                 .toList();
     }
+    public String previousPage(CommandInput commandInput) {
+        User user = getInstance().getUser(commandInput.getUsername());
+        if (user.getCurrentIndex() == 0) {
+            return "There are no pages left to go back.";
+        }
+        Command previousCommand = new PreviousPage(user);
+        previousCommand.execute();
+        return "The user %s has navigated successfully to the previous page.".formatted(user.getUsername());
+    }
+    public String nextPage(CommandInput commandInput) {
+        User user = getInstance().getUser(commandInput.getUsername());
+        if (user.getCurrentIndex() == user.getPages().size() - 1) {
+            return "There are no pages left to go forward.";
+        }
+        Command nextCommand = new NextPage(user);
+        nextCommand.execute();
+        return "The user %s has navigated successfully to the next page.".formatted(user.getUsername());
+    }
+
 }
