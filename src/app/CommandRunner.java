@@ -5,10 +5,7 @@ import app.audio.Collections.PlaylistOutput;
 import app.audio.Collections.PodcastOutput;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
-import app.user.Artist;
-import app.user.Host;
-import app.user.Notification;
-import app.user.User;
+import app.user.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -50,7 +47,7 @@ public final class CommandRunner {
         String message = "%s is offline.".formatted(user.getUsername());
 
         if (user.isStatus()) {
-            results = user.search(filters, type);
+            results = user.search(filters, type, commandInput);
             message = "Search returned " + results.size() + " results";
         }
 
@@ -92,7 +89,7 @@ public final class CommandRunner {
      */
     public static ObjectNode load(final CommandInput commandInput) {
         User user = admin.getUser(commandInput.getUsername());
-        String message = user.load();
+        String message = user.load(commandInput);
 
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
@@ -871,6 +868,17 @@ public final class CommandRunner {
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
         objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode wrapped(final CommandInput commandInput) {
+        ObjectNode result = Admin.getInstance().wrapped(commandInput);
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("result", result);
 
         return objectNode;
     }

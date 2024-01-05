@@ -3,7 +3,15 @@ package app.user;
 import app.audio.Collections.Podcast;
 import app.pages.HostPage;
 
+import app.user.Statistics.EpisodeInfo;
+import app.user.Statistics.WrappedHost;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The type Host.
@@ -11,6 +19,18 @@ import java.util.ArrayList;
 public final class Host extends ContentCreator {
     private ArrayList<Podcast> podcasts;
     private ArrayList<Announcement> announcements;
+    @Getter
+    @Setter
+    private WrappedHost statistics;
+    @Getter
+    @Setter
+    private List<User> listeners;
+    @Getter
+    @Setter
+    private int noListeners = 0;
+    @Getter
+    @Setter
+    private List<EpisodeInfo> episodesInfos;
 
     /**
      * Instantiates a new Host.
@@ -23,6 +43,8 @@ public final class Host extends ContentCreator {
         super(username, age, city);
         podcasts = new ArrayList<>();
         announcements = new ArrayList<>();
+        listeners = new ArrayList<>();
+        episodesInfos = new ArrayList<>();
 
         super.setPage(new HostPage(this));
     }
@@ -98,5 +120,20 @@ public final class Host extends ContentCreator {
     @Override
     public String userType() {
         return "host";
+    }
+    public ObjectNode formattedStatisticsHost() {
+        // Convertirea obiectului WrappedHost într-un obiect JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode resultNode = objectMapper.createObjectNode();
+        ObjectNode topEpisodesNode = resultNode.putObject("topEpisodes");
+        WrappedHost wrappedHost = getStatistics();
+        // Adăugarea informațiilor despre episoadele de top
+        for (EpisodeInfo episode : wrappedHost.getTopEpisodes()) {
+            topEpisodesNode.put(episode.getName(), episode.getNoListen());
+        }
+
+        // Adăugarea informațiilor despre ascultători
+        resultNode.put("listeners", wrappedHost.getListeners());
+        return resultNode;
     }
 }

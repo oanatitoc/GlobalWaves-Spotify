@@ -30,11 +30,16 @@ public final class Test {
 
             Scanner scanner = new Scanner(System.in);
             String fileName = scanner.next();
+            //String fileName = "test10_etapa3_wrapped_host.json";
             for (File file : inputDir) {
                 if (file.getName().equalsIgnoreCase(fileName)) {
                     Main.action(file.getAbsolutePath(), CheckerConstants.OUT_FILE);
                     break;
                 }
+//                if (file.getName().equalsIgnoreCase(fileName)) {
+//                    Main.action(fileName, "out.json");
+//                    break;
+//                }
             }
         }
     }

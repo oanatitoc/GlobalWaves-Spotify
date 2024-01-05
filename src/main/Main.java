@@ -146,7 +146,8 @@ public final class Main {
                 case "previousPage" -> outputs.add(CommandRunner.previousPage(command));
                 case "nextPage" -> outputs.add(CommandRunner.nextPage(command));
                 case "loadRecommendations" -> outputs.add(CommandRunner.loadRecommendations(command));
-                default -> System.out.println("Invalid command " + commandName);
+                case "wrapped" -> outputs.add(CommandRunner.wrapped(command));
+                //default -> System.out.println("Invalid command " + commandName);
             }
         }
         outputs.add(CommandRunner.endProgram());

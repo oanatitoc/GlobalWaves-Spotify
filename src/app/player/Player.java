@@ -13,15 +13,18 @@ import java.util.List;
  * The type Player.
  */
 public final class Player {
+    @Getter
     private Enums.RepeatMode repeatMode;
+    @Getter
     private boolean shuffle;
+    @Getter
     private boolean paused;
     @Getter
     private PlayerSource source;
     @Getter
     private String type;
     private final int skipTime = 90;
-
+    @Getter
     private ArrayList<PodcastBookmark> bookmarks = new ArrayList<>();
 
     public String getType() {
@@ -34,6 +37,16 @@ public final class Player {
     public Player() {
         this.repeatMode = Enums.RepeatMode.NO_REPEAT;
         this.paused = true;
+    }
+
+    public Player(Enums.RepeatMode repeatMode, boolean shuffle, boolean paused,
+                  PlayerSource source, String type, ArrayList<PodcastBookmark> bookmarks) {
+        this.repeatMode = repeatMode;
+        this.shuffle = shuffle;
+        this.paused = paused;
+        this.source = source;
+        this.type = type;
+        this.bookmarks = bookmarks;
     }
 
     /**

@@ -13,6 +13,10 @@ import app.pages.Page;
 import app.pages.PreviousPage;
 import app.player.Player;
 import app.user.*;
+import app.user.Statistics.WrappedArtist;
+import app.user.Statistics.WrappedHost;
+import app.user.Statistics.WrappedUser;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
 import fileio.input.EpisodeInput;
 import fileio.input.PodcastInput;
@@ -1153,6 +1157,31 @@ public final class Admin {
         Command nextCommand = new NextPage(user);
         nextCommand.execute();
         return "The user %s has navigated successfully to the next page.".formatted(user.getUsername());
+    }
+    public ObjectNode wrapped(CommandInput commandInput) {
+        // check if there is the username in the command input belongs to an artist
+        // chatGPT
+        for (User user : users) {
+            user.updateStatistics(user.getLastTimestamp(), commandInput.getTimestamp(), user.getUsername());
+            user.setCopyPlayer(null);
+        }
+        if (artists.stream().anyMatch(artist -> artist.getUsername().equals(commandInput.getUsername()))) {
+            Artist artist = getArtist(commandInput.getUsername());
+            artist.setStatistics(new WrappedArtist(artist.getAlbumsInfos(), artist.getSongsInfos(),
+                    artist.getFansNames(), artist.getNoListeners()));
+            artist.arrangeStatistics();
+            return artist.formattedStatisticsArtist();
+        }
+        if (hosts.stream().anyMatch(host -> host.getUsername().equals(commandInput.getUsername()))) {
+            Host host = getHost(commandInput.getUsername());
+            host.setStatistics(new WrappedHost(host.getEpisodesInfos(), host.getNoListeners()));
+            return host.formattedStatisticsHost();
+        }
+        User user = getUser(commandInput.getUsername());
+        user.setStatistics(new WrappedUser(user.getArtistsInfos(), user.getGenresInfos(), user.getSongsInfos(),
+                user.getAlbumsInfos(), user.getEpisodesInfos()));
+        user.arrangeStatistics();
+        return user.formattedStatisticsUser();
     }
 
 }

@@ -1,25 +1,68 @@
 package app.user;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import app.audio.Collections.Album;
 import app.audio.Collections.AlbumOutput;
 import app.audio.Files.Song;
 import app.pages.ArtistPage;
+import app.user.Statistics.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.Getter;
+import lombok.Setter;
+import net.sf.saxon.tree.tiny.Statistics;
 
 /**
  * The type Artist.
  */
 public final class Artist extends ContentCreator {
+    @Getter
+    @Setter
     private ArrayList<Album> albums;
+    @Getter
+    @Setter
     private ArrayList<Merchandise> merch;
+    @Getter
+    @Setter
     private ArrayList<Event> events;
+    @Getter
+    @Setter
     private Double merchRevenue;
+    @Getter
+    @Setter
     private Double songRevenue;
+    @Getter
+    @Setter
     private int ranking;
+    @Getter
+    @Setter
     private String mostProfitableSong;
+    @Getter
+    @Setter
     private int noPlays;
+    @Getter
+    @Setter
+    private WrappedArtist statistics;
+    @Getter
+    @Setter
+    private List<AlbumInfo> albumsInfos;
+    @Getter
+    @Setter
+    private List<SongInfo> songsInfos;
+    @Getter
+    @Setter
+    private List<String> fansNames;
+    @Getter
+    @Setter
+    private List<User> listeners;
+    @Getter
+    @Setter
+    private int noListeners = 0;
 
     /**
      * Instantiates a new Artist.
@@ -38,35 +81,13 @@ public final class Artist extends ContentCreator {
         mostProfitableSong = "N/A";
         ranking = 1;
         noPlays = 0;
+        albumsInfos = new ArrayList<>();
+        songsInfos = new ArrayList<>();
+        fansNames = new ArrayList<>();
+        listeners = new ArrayList<>();
         super.setPage(new ArtistPage(this));
     }
 
-    /**
-     * Gets albums.
-     *
-     * @return the albums
-     */
-    public ArrayList<Album> getAlbums() {
-        return albums;
-    }
-
-    /**
-     * Gets merch.
-     *
-     * @return the merch
-     */
-    public ArrayList<Merchandise> getMerch() {
-        return merch;
-    }
-
-    /**
-     * Gets events.
-     *
-     * @return the events
-     */
-    public ArrayList<Event> getEvents() {
-        return events;
-    }
 
     /**
      * Gets event.
@@ -134,49 +155,61 @@ public final class Artist extends ContentCreator {
     public String userType() {
         return "artist";
     }
-    public Double getMerchRevenue() {
-        return merchRevenue;
-    }
 
-    public void setMerchRevenue(final Double merchRevenue) {
-        this.merchRevenue = merchRevenue;
-    }
-
-    public Double getSongRevenue() {
-        return songRevenue;
-    }
-
-    public void setSongRevenue(final Double songRevenue) {
-        this.songRevenue = songRevenue;
-    }
-
-    public int getRanking() {
-        return ranking;
-    }
-
-    public void setRanking(final int ranking) {
-        this.ranking = ranking;
-    }
-
-    public String getMostProfitableSong() {
-        return mostProfitableSong;
-    }
-
-    public void setMostProfitableSong(final String mostProfitableSong) {
-        this.mostProfitableSong = mostProfitableSong;
-    }
     public void addMerchRevenue(final Double price) {
         merchRevenue += price;
     }
-    public void addSongRevenue(final Double price) {
-        songRevenue += price;
+    public void arrangeStatistics() {
+        List<AlbumInfo> albums = statistics.getTopAlbums();
+        //sortare Albume chatGPT
+        List<AlbumInfo> top5Albums = albums.stream()
+                .sorted(Comparator
+                        .comparingInt(AlbumInfo::getNoListen)
+                        .reversed()
+                        .thenComparing(AlbumInfo::getName))
+                .limit(5)
+                .collect(Collectors.toList());
+        statistics.setTopAlbums(top5Albums);
+
+        //sortare cantece
+        List<SongInfo> songs = statistics.getTopSongs();
+        List<SongInfo> top5Songs = songs.stream()
+                .sorted(Comparator
+                        .comparingInt(SongInfo::getNoListen)
+                        .reversed()
+                        .thenComparing(SongInfo::getName))
+                .limit(5)
+                .collect(Collectors.toList());
+        statistics.setTopSongs(top5Songs);
+
     }
 
-    public int getNoPlays() {
-        return noPlays;
+    public ObjectNode formattedStatisticsArtist() {
+        // Convertirea obiectului WrappedHost într-un obiect JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode resultNode = objectMapper.createObjectNode();
+
+        WrappedArtist wrappedArtist = getStatistics();
+
+        ObjectNode topAlbumsNode = resultNode.putObject("topAlbums");
+        // Adăugarea informațiilor despre albumele de top
+        for (AlbumInfo album : wrappedArtist.getTopAlbums()) {
+            topAlbumsNode.put(album.getName(), album.getNoListen());
+        }
+
+        ObjectNode topSongsNode = resultNode.putObject("topSongs");
+        // Adăugarea informațiilor despre cantecele de top
+        for (SongInfo song : wrappedArtist.getTopSongs()) {
+            topSongsNode.put(song.getName(), song.getNoListen());
+        }
+
+        ArrayNode topFansNode = resultNode.putArray("topFans");
+        // Adăugarea informațiilor despre cantecele de top
+        for(String name : wrappedArtist.getTopFans())
+            topFansNode.add(name);
+
+        resultNode.put("listeners", wrappedArtist.getListeners());
+        return resultNode;
     }
 
-    public void setNoPlays(final int noPlays) {
-        this.noPlays = noPlays;
-    }
 }

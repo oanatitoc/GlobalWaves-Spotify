@@ -195,48 +195,35 @@
   "user" : "alice22",
   "timestamp" : 4000,
   "result" : {
-    "topArtists" : { },
-    "topGenres" : { },
-    "topSongs" : { },
-    "topAlbums" : { },
-    "topEpisodes" : {
-      "The Power of Design" : 2,
-      "Elon Musk Returns" : 1,
-      "Ghosts" : 1,
-      "Salman Rushdie Reads Gabriel Garcia Marquez" : 1,
-      "The Science of Us" : 1
-    }
+    "topArtists" : [ ],
+    "topGenres" : [ ],
+    "topSongs" : [ ],
+    "topAlbums" : [ ],
+    "topEpisodes" : [ ]
   }
 }, {
   "command" : "wrapped",
   "user" : "Guy Raz",
   "timestamp" : 4000,
   "result" : {
-    "topEpisodes" : {
-      "The Power of Design" : 2,
-      "The Science of Us" : 1
-    },
-    "listeners" : 1
+    "topEpisodes" : [ ],
+    "listeners" : 0
   }
 }, {
   "command" : "wrapped",
   "user" : "Jad Abumrad and Robert Krulwich",
   "timestamp" : 4000,
   "result" : {
-    "topEpisodes" : {
-      "Ghosts" : 1
-    },
-    "listeners" : 1
+    "topEpisodes" : [ ],
+    "listeners" : 0
   }
 }, {
   "command" : "wrapped",
   "user" : "Joe Rogan",
   "timestamp" : 4000,
   "result" : {
-    "topEpisodes" : {
-      "Elon Musk Returns" : 1
-    },
-    "listeners" : 1
+    "topEpisodes" : [ ],
+    "listeners" : 0
   }
 }, {
   "command" : "endProgram",
