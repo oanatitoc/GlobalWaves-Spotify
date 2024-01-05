@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import app.Admin;
 import app.audio.Collections.Album;
 import app.audio.Collections.AlbumOutput;
 import app.audio.Files.Song;
@@ -63,6 +64,8 @@ public final class Artist extends ContentCreator {
     @Getter
     @Setter
     private int noListeners = 0;
+    @Getter
+    private boolean hasAccessedData;
 
     /**
      * Instantiates a new Artist.
@@ -85,6 +88,7 @@ public final class Artist extends ContentCreator {
         songsInfos = new ArrayList<>();
         fansNames = new ArrayList<>();
         listeners = new ArrayList<>();
+        hasAccessedData = false;
         super.setPage(new ArtistPage(this));
     }
 
@@ -159,7 +163,7 @@ public final class Artist extends ContentCreator {
     public void addMerchRevenue(final Double price) {
         merchRevenue += price;
     }
-    public void arrangeStatistics() {
+    public void arrangeStatistics(Artist artist) {
         List<AlbumInfo> albums = statistics.getTopAlbums();
         //sortare Albume chatGPT
         List<AlbumInfo> top5Albums = albums.stream()
@@ -182,6 +186,32 @@ public final class Artist extends ContentCreator {
                 .collect(Collectors.toList());
         statistics.setTopSongs(top5Songs);
 
+
+        List<String> topFans = statistics.getTopFans();
+        List<User> fansUsers = new ArrayList<>();
+        for (String fan : topFans) {
+            User user = Admin.getInstance().getUser(fan);
+            fansUsers.add(user);
+        }
+        List<FanInfo> fanInfos = new ArrayList<>();
+        for (User user : fansUsers) {
+            List<ArtistInfo> artistInfos = user.getArtistsInfos();
+            for (ArtistInfo artistInfo : artistInfos) {
+                if(artistInfo.getName().equals(artist.getUsername())) {
+                    fanInfos.add(new FanInfo(user.getUsername(), artistInfo.getNoListen()));
+                }
+            }
+        }
+        List<String> fans = fanInfos.stream()
+                .sorted(Comparator
+                        .comparingInt(FanInfo::getNoListen)
+                        .reversed()
+                        .thenComparing(FanInfo::getName))
+                .map(FanInfo::getName)
+                .limit(5)
+                .collect(Collectors.toList());
+        statistics.setTopFans(fans);
+
     }
 
     public ObjectNode formattedStatisticsArtist() {
@@ -194,19 +224,23 @@ public final class Artist extends ContentCreator {
         ObjectNode topAlbumsNode = resultNode.putObject("topAlbums");
         // Adăugarea informațiilor despre albumele de top
         for (AlbumInfo album : wrappedArtist.getTopAlbums()) {
+            hasAccessedData = true;
             topAlbumsNode.put(album.getName(), album.getNoListen());
         }
 
         ObjectNode topSongsNode = resultNode.putObject("topSongs");
         // Adăugarea informațiilor despre cantecele de top
         for (SongInfo song : wrappedArtist.getTopSongs()) {
+            hasAccessedData = true;
             topSongsNode.put(song.getName(), song.getNoListen());
         }
 
         ArrayNode topFansNode = resultNode.putArray("topFans");
         // Adăugarea informațiilor despre cantecele de top
-        for(String name : wrappedArtist.getTopFans())
+        for(String name : wrappedArtist.getTopFans()) {
+            hasAccessedData = true;
             topFansNode.add(name);
+        }
 
         resultNode.put("listeners", wrappedArtist.getListeners());
         return resultNode;

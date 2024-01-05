@@ -5,6 +5,7 @@ import app.audio.Files.AudioFile;
 import app.audio.LibraryEntry;
 import app.utils.Enums;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,12 @@ public final class Player {
     private final int skipTime = 90;
     @Getter
     private ArrayList<PodcastBookmark> bookmarks = new ArrayList<>();
+    @Getter
+    @Setter
+    private int loadTimestamp; // the time when the current Source has been loaded in player
+    @Getter
+    @Setter
+    private int updatedTimestamp; // the last time when statistics for this source has been updated
 
     public String getType() {
         return type;

@@ -109,12 +109,19 @@ public final class User extends UserAbstract {
     @Setter
     private List<EpisodeInfo> episodesInfos;
 
+    @Setter
     @Getter
-    @Setter
-    private int lastTimestamp;
-    @Setter
     private Player copyPlayer;
 
+    private boolean hasAccessedData; //in order to check if there is any data available for this user for wrapped command
+
+    public boolean isHasAccessedData() {
+        return hasAccessedData;
+    }
+
+    public void setHasAccessedData(boolean hasAccessedData) {
+        this.hasAccessedData = hasAccessedData;
+    }
 
     /**
      * Instantiates a new User.
@@ -149,6 +156,7 @@ public final class User extends UserAbstract {
         albumsInfos = new ArrayList<>();
         episodesInfos = new ArrayList<>();
         copyPlayer = new Player();
+        hasAccessedData = false;
 
     }
 
@@ -166,7 +174,8 @@ public final class User extends UserAbstract {
      */
     public ArrayList<String> search(final Filters filters, final String type, CommandInput commandInput) {
         searchBar.clearSelection();
-        updateStatistics(lastTimestamp, commandInput.getTimestamp(), commandInput.getUsername());
+        Admin.getInstance().updateStatistics(copyPlayer.getLoadTimestamp(), copyPlayer.getUpdatedTimestamp(),
+                commandInput.getTimestamp(), Admin.getInstance().getUser(commandInput.getUsername()));
         player.stop();
 
         lastSearched = true;
@@ -252,7 +261,6 @@ public final class User extends UserAbstract {
 
         player.setSource(searchBar.getLastSelected(), searchBar.getLastSearchType());
         searchBar.clearSelection();
-        setLastTimestamp(commandInput.getTimestamp());
 
         player.pause();
 
@@ -271,6 +279,8 @@ public final class User extends UserAbstract {
         }
         copyPlayer = new Player(player.getRepeatMode(), player.getShuffle(), player.getPaused(),
                 player.getSource(), player.getType(), player.getBookmarks());
+        copyPlayer.setLoadTimestamp(commandInput.getTimestamp());
+        copyPlayer.setUpdatedTimestamp(commandInput.getTimestamp());
         return "Playback loaded successfully.";
     }
 
@@ -741,11 +751,6 @@ public final class User extends UserAbstract {
             return "No recommendations available.";
         }
 
-//        if (!getLastRecommendationType().equals("song")
-//                && ((AudioCollection) getLastRecommendation().getNumberOfTracks() == 0) {
-//            return "You can't load an empty audio collection!";
-//        }
-
         player.setSource(getLastRecommendation(), getLastRecommendationType());
         searchBar.clearSelection();
 
@@ -768,260 +773,7 @@ public final class User extends UserAbstract {
         return "Playback loaded successfully.";
     }
 
-    public void updateStatisticsForEpisodes(Podcast podcast, Episode episode, User user) {
-        Host host = Admin.getInstance().getHost(podcast.getOwner());
-        if (host != null) {
-            // update the statistics for the host
-            List<User> hostListeners = host.getListeners();
-            if (!hostListeners.contains(user)) {
-                hostListeners.add(user);
-                host.setListeners(hostListeners);
-                host.setNoListeners(host.getNoListeners() + 1);
-            }
-            List<EpisodeInfo> episodeInfos = host.getEpisodesInfos();
-            if (!episodeInfos.stream().anyMatch(ep -> ep.getName().equals(episode.getName()))) {
-                episodeInfos.add(new EpisodeInfo(episode.getName()));
-            } else {
-                System.out.println("bau ");
-                episodeInfos.stream()
-                        .filter(ep -> ep.getName().equals(episode.getName()))
-                        .forEach(ep -> ep.setNoListen(ep.getNoListen() + 1));
 
-            }
-            host.setEpisodesInfos(episodeInfos);
-
-        }
-        // update the statistics for the user
-        List<EpisodeInfo> episodeInfos = user.getEpisodesInfos();
-        if (!episodeInfos.stream().anyMatch(ep -> ep.getName().equals(episode.getName()))) {
-            episodeInfos.add(new EpisodeInfo(episode.getName()));
-        } else {
-            episodeInfos.stream()
-                    .filter(ep -> ep.getName().equals(episode.getName()))
-                    .forEach(ep -> ep.setNoListen(ep.getNoListen() + 1));
-
-        }
-        user.setEpisodesInfos(episodeInfos);
-    }
-
-    public void updateStatisticsForAlbums(Album album, User user, int passedTime) {
-        Artist artist = Admin.getInstance().getArtist(album.getOwner());
-        if (artist != null) {
-            //update number of listeners for artist
-            List<User> artistListeners = artist.getListeners();
-            if (!artistListeners.contains(user)) {
-                artistListeners.add(user);
-                artist.setListeners(artistListeners);
-                artist.setNoListeners(artist.getNoListeners() + 1);
-            }
-
-            //update fansInfos for artist
-            List<String> fansInfos = artist.getFansNames();
-            if(!fansInfos.contains(user.getUsername())) {
-                fansInfos.add(user.getUsername());
-                artist.setFansNames(fansInfos);
-            }
-
-            //update songInfos for artist and for user
-            List<SongInfo> songsInfos = artist.getSongsInfos();
-            List<SongInfo> songsInfosUser = user.getSongsInfos();
-            int countTime = 0;
-            int noListensForAlbum = 0;
-            for (Song song : album.getSongs()) {
-                if (countTime <= passedTime) {
-                    countTime += song.getDuration();
-                    noListensForAlbum++;
-                    // load this song in the statistics
-                    if (!songsInfos.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
-                        songsInfos.add(new SongInfo(song.getName(), 1));
-                    } else {
-                        songsInfos.stream()
-                                .filter(sg -> sg.getName().equals(song.getName()))
-                                .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-
-                    }
-                    if (!songsInfosUser.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
-                        songsInfosUser.add(new SongInfo(song.getName(), 1));
-                    } else {
-                        songsInfosUser.stream()
-                                .filter(sg -> sg.getName().equals(song.getName()))
-                                .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-                    }
-                    artist.setSongsInfos(songsInfos);
-                    user.setSongsInfos(songsInfosUser);
-                }
-            }
-            // updates album info for artist and user
-            List<AlbumInfo> albumsInfos = artist.getAlbumsInfos();
-            List<AlbumInfo> albumsInfosUser = user.getAlbumsInfos();
-            if (!albumsInfos.stream().anyMatch(albm -> albm.getName().equals(album.getName()))) {
-                albumsInfos.add(new AlbumInfo(album.getName(), noListensForAlbum));
-            } else {
-                int finalNoListensForAlbum = noListensForAlbum;
-                albumsInfos.stream().filter(alb -> alb.getName().equals(album.getName())).
-                        forEach(alb ->alb.setNoListen(alb.getNoListen() + finalNoListensForAlbum));
-            }
-            artist.setAlbumsInfos(albumsInfos);
-
-            if (!albumsInfosUser.stream().anyMatch(albm -> albm.getName().equals(album.getName()))) {
-                albumsInfosUser.add(new AlbumInfo(album.getName(), noListensForAlbum));
-            } else {
-                int finalNoListensForAlbum = noListensForAlbum;
-                albumsInfosUser.stream().filter(alb -> alb.getName().equals(album.getName())).
-                        forEach(alb ->alb.setNoListen(alb.getNoListen() + finalNoListensForAlbum));
-            }
-            user.setAlbumsInfos(albumsInfosUser);
-
-            //update Artists info for user
-            List<ArtistInfo> artistsInfos = user.getArtistsInfos();
-
-            if (!artistsInfos.stream().anyMatch(art -> art.getName().equals(artist.getUsername()))) {
-                artistsInfos.add(new ArtistInfo(artist.getUsername(), noListensForAlbum));
-            } else {
-                int finalNoListensForAlbum1 = noListensForAlbum;
-                artistsInfos.stream()
-                        .filter(art -> art.getName().equals(artist.getUsername()))
-                        .forEach(art -> art.setNoListen(art.getNoListen() + finalNoListensForAlbum1));
-            }
-            user.setArtistsInfos(artistsInfos);
-
-            //update the GenreInfos for users
-            List<GenreInfo> genreInfos = user.getGenresInfos();
-            countTime = 0;
-            for (Song song : album.getSongs()) {
-                if (countTime <= passedTime) {
-                    countTime += song.getDuration();
-                    // load this genre in the statistcs
-                    if (!genreInfos.stream().anyMatch(sg -> sg.getName().equals(song.getGenre()))) {
-                        genreInfos.add(new GenreInfo(song.getGenre(), 1));
-                    } else {
-                        genreInfos.stream()
-                                .filter(sg -> sg.getName().equals(song.getGenre()))
-                                .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-
-                    }
-                    user.setGenresInfos(genreInfos);
-                }
-            }
-        }
-    }
-    public void updateStatisticsforSongs(Song song, User user) {
-        Artist artist = Admin.getInstance().getArtist(song.getArtist());
-        if (artist != null) {
-            //update number of listeners for artist
-            List<User> artistListeners = artist.getListeners();
-            if (!artistListeners.contains(user)) {
-                artistListeners.add(user);
-                artist.setListeners(artistListeners);
-                artist.setNoListeners(artist.getNoListeners() + 1);
-            }
-
-            //update fansInfos for artist
-            List<String> fansInfos = artist.getFansNames();
-            if(!fansInfos.contains(user.getUsername())) {
-                fansInfos.add(user.getUsername());
-                artist.setFansNames(fansInfos);
-            }
-
-            //update songInfos for artist and for user
-            List<SongInfo> songsInfos = artist.getSongsInfos();
-
-            // load this song in the statistics
-            if (!songsInfos.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
-                songsInfos.add(new SongInfo(song.getName(), 1));
-            } else {
-                songsInfos.stream()
-                        .filter(sg -> sg.getName().equals(song.getName()))
-                        .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-
-            }
-            artist.setSongsInfos(songsInfos);
-
-            List<SongInfo> songsInfosUser = user.getSongsInfos();
-            if (!songsInfosUser.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
-                songsInfosUser.add(new SongInfo(song.getName(), 1));
-            } else {
-                songsInfosUser.stream()
-                        .filter(sg -> sg.getName().equals(song.getName()))
-                        .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-            }
-            user.setSongsInfos(songsInfosUser);
-
-            // updates album info for artist and user
-            List<AlbumInfo> albumsInfos = artist.getAlbumsInfos();
-
-            if (!albumsInfos.stream().anyMatch(albm -> albm.getName().equals(song.getAlbum()))) {
-                albumsInfos.add(new AlbumInfo(song.getAlbum(), 1));
-            } else {
-                albumsInfos.stream().filter(albm -> albm.getName().equals(song.getAlbum())).
-                        forEach(albm ->albm.setNoListen(albm.getNoListen() + 1));
-            }
-            artist.setAlbumsInfos(albumsInfos);
-
-            List<AlbumInfo> albumsInfosUser = user.getAlbumsInfos();
-            if (!albumsInfosUser.stream().anyMatch(albm -> albm.getName().equals(song.getAlbum()))) {
-                albumsInfosUser.add(new AlbumInfo(song.getAlbum(), 1));
-            } else {
-                albumsInfosUser.stream().filter(albm -> albm.getName().equals(song.getAlbum())).
-                        forEach(albm ->albm.setNoListen(albm.getNoListen() + 1));
-            }
-            user.setAlbumsInfos(albumsInfosUser);
-
-            //update Artists info for user
-            List<ArtistInfo> artistsInfos = user.getArtistsInfos();
-
-            if (!artistsInfos.stream().anyMatch(art -> art.getName().equals(artist.getUsername()))) {
-                artistsInfos.add(new ArtistInfo(artist.getUsername(), 1));
-            } else {
-                artistsInfos.stream()
-                        .filter(art -> art.getName().equals(artist.getUsername()))
-                        .forEach(art -> art.setNoListen(art.getNoListen() + 1));
-            }
-            user.setArtistsInfos(artistsInfos);
-            //update the GenreInfos for users
-            List<GenreInfo> genreInfos = user.getGenresInfos();
-
-            // load this genre in the statistcs
-            if (!genreInfos.stream().anyMatch(sg -> sg.getName().equals(song.getGenre()))) {
-                genreInfos.add(new GenreInfo(song.getGenre(), 1));
-            } else {
-                genreInfos.stream()
-                        .filter(sg -> sg.getName().equals(song.getGenre()))
-                        .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-
-            }
-            user.setGenresInfos(genreInfos);
-
-
-        }
-    }
-
-    public void updateStatistics(int lastTime, int currentTime, String userName) {
-        User user = Admin.getInstance().getUser(userName);
-        if (copyPlayer != null && copyPlayer.getSource() != null) {
-            // the time that has passed between the last load command and current search command
-            int passedTime = currentTime - lastTime;
-            int countTime = 0;
-            if (copyPlayer.getType().equals("podcast")) {
-                Podcast podcast = (Podcast) copyPlayer.getCurrentAudioCollection();
-                for (Episode episode : podcast.getEpisodes()) {
-                    if (countTime < passedTime) {
-                        countTime += episode.getDuration();
-                        updateStatisticsForEpisodes(podcast, episode, user);
-                    }
-                }
-            }
-            if (copyPlayer.getType().equals("album")) {
-                Album album = (Album) copyPlayer.getCurrentAudioCollection();
-                updateStatisticsForAlbums(album, user, passedTime);
-            }
-            if (copyPlayer.getType().equals("song")) {
-                Song song = (Song) copyPlayer.getCurrentAudioFile();
-                updateStatisticsforSongs(song, user);
-            }
-
-        }
-    }
     public void arrangeStatistics() {
         List<AlbumInfo> albums = statistics.getTopAlbums();
         //sortare Albume chatGPT
@@ -1033,6 +785,30 @@ public final class User extends UserAbstract {
                 .limit(5)
                 .collect(Collectors.toList());
         statistics.setTopAlbums(top5Albums);
+
+        // sortare artisti
+        List<ArtistInfo> artists = statistics.getTopArtists();
+        List<ArtistInfo> top5Artists = artists.stream()
+                .sorted(Comparator
+                        .comparingInt(ArtistInfo::getNoListen)
+                        .reversed()
+                        .thenComparing(ArtistInfo::getName))
+                .limit(5)
+                .collect(Collectors.toList());
+        statistics.setTopArtists(top5Artists);
+
+
+        // sortare genuri
+        List<GenreInfo> genres = statistics.getTopGenres();
+        List<GenreInfo> top5Genres = genres.stream()
+                .sorted(Comparator
+                        .comparingInt(GenreInfo::getNoListen)
+                        .reversed()
+                        .thenComparing(GenreInfo::getName))
+                .limit(5)
+                .collect(Collectors.toList());
+        statistics.setTopGenres(top5Genres);
+
 
         //sortare cantece
         List<SongInfo> songs = statistics.getTopSongs();
@@ -1056,30 +832,35 @@ public final class User extends UserAbstract {
         ObjectNode topArtistsNode = resultNode.putObject("topArtists");
         // Adăugarea informațiilor despre artistii de top
         for (ArtistInfo artist : wrappedUser.getTopArtists()) {
+            setHasAccessedData(true);
             topArtistsNode.put(artist.getName(), artist.getNoListen());
         }
 
         ObjectNode topGenresNode = resultNode.putObject("topGenres");
         // Adăugarea informațiilor despre genurile de top
         for (GenreInfo genre : wrappedUser.getTopGenres()) {
+            setHasAccessedData(true);
             topGenresNode.put(genre.getName(), genre.getNoListen());
         }
 
         ObjectNode topSongsNode = resultNode.putObject("topSongs");
         // Adăugarea informațiilor despre cantecele de top
         for (SongInfo song : wrappedUser.getTopSongs()) {
+            setHasAccessedData(true);
             topSongsNode.put(song.getName(), song.getNoListen());
         }
 
         ObjectNode topAlbumsNode = resultNode.putObject("topAlbums");
         // Adăugarea informațiilor despre albumele de top
         for (AlbumInfo album : wrappedUser.getTopAlbums()) {
+            setHasAccessedData(true);
             topAlbumsNode.put(album.getName(), album.getNoListen());
         }
 
         ObjectNode topEpisodesNode = resultNode.putObject("topEpisodes");
         // Adăugarea informațiilor despre episoadele de top
         for (EpisodeInfo episode : wrappedUser.getTopEpisodes()) {
+            setHasAccessedData(true);
             topEpisodesNode.put(episode.getName(), episode.getNoListen());
         }
 

@@ -872,19 +872,29 @@ public final class CommandRunner {
         return objectNode;
     }
     public static ObjectNode wrapped(final CommandInput commandInput) {
-        ObjectNode result = Admin.getInstance().wrapped(commandInput);
+
 
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
+        User user = Admin.getInstance().getUser(commandInput.getUsername());
+        ObjectNode result = Admin.getInstance().wrapped(commandInput);
+        if(user != null) {
+            if (!user.isHasAccessedData()) {
+                String message = "No data to show for user " + user.getUsername() + ".";
+                objectNode.put("message", message);
+                return objectNode;
+            }
+        }
         objectNode.put("result", result);
+
 
         return objectNode;
     }
 
     public static ObjectNode endProgram() {
-        Map<String, Map<String, Object>> result = new HashMap<>();
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
         List<Artist> artists = new ArrayList<>(Admin.getInstance().getArtists());
         // sort the artists given their total amount of money
 
@@ -896,7 +906,7 @@ public final class CommandRunner {
         int rankingValue = 1;
         for (Artist artist : artists) {
             if(artist.getNoPlays() != 0 || artist.getMerchRevenue() != 0 || artist.getSongRevenue() != 0) {
-                Map<String, Object> artistInfo = new HashMap<>();
+                Map<String, Object> artistInfo = new LinkedHashMap<>();
                 artistInfo.put("merchRevenue", artist.getMerchRevenue());
                 artistInfo.put("songRevenue", artist.getSongRevenue());
                 artistInfo.put("ranking", rankingValue);
