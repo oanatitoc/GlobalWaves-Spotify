@@ -22,6 +22,7 @@ public final class CommandRunner {
      */
     private static ObjectMapper objectMapper = new ObjectMapper();
     private static Admin admin;
+    private static final int maxInt =  2147483647;
 
     /**
      * Update admin.
@@ -879,10 +880,18 @@ public final class CommandRunner {
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
         User user = Admin.getInstance().getUser(commandInput.getUsername());
+        Artist artist = Admin.getInstance().getArtist(commandInput.getUsername());
         ObjectNode result = Admin.getInstance().wrapped(commandInput);
         if(user != null) {
             if (!user.isHasAccessedData()) {
                 String message = "No data to show for user " + user.getUsername() + ".";
+                objectNode.put("message", message);
+                return objectNode;
+            }
+        }
+        if(artist != null) {
+            if (!artist.isHasAccessedData()) {
+                String message = "No data to show for artist " + artist.getUsername() + ".";
                 objectNode.put("message", message);
                 return objectNode;
             }
@@ -892,16 +901,57 @@ public final class CommandRunner {
 
         return objectNode;
     }
+    public static ObjectNode buyPremium(final CommandInput commandInput) {
+        String message = Admin.getInstance().buyPremium(commandInput);
 
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode cancelPremium(final CommandInput commandInput) {
+        String message = Admin.getInstance().cancelPremium(commandInput);
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
+    public static ObjectNode adBreak(final CommandInput commandInput) {
+        String message = Admin.getInstance().adBreak(commandInput);
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", message);
+
+        return objectNode;
+    }
     public static ObjectNode endProgram() {
         Map<String, Map<String, Object>> result = new LinkedHashMap<>();
         List<Artist> artists = new ArrayList<>(Admin.getInstance().getArtists());
+        // update the statistics for all users in order to get the songRevenue of all artists
+//        for(String username : Admin.getInstance().getOnlineUsers()) {
+//            User user = Admin.getInstance().getUser(username);
+//            if (user.getCopyPlayer() != null) {
+//                Admin.getInstance().updateStatistics(user.getCopyPlayer().getLoadTimestamp(),
+//                        user.getCopyPlayer().getUpdatedTimestamp(), maxInt, user);
+//            }
+//        }
+        Admin.getInstance().updateSongsRevenues();
         // sort the artists given their total amount of money
-
         Comparator<Artist> artistComparator = Comparator
                 .comparing(Artist::getMerchRevenue)
+                .thenComparing(Artist::getSongRevenue)
                 .reversed()
-                .thenComparing(Comparator.comparing(Artist::getUsername));
+                .thenComparing(Artist::getUsername);
         Collections.sort(artists, artistComparator);
         int rankingValue = 1;
         for (Artist artist : artists) {

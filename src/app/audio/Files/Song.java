@@ -1,6 +1,7 @@
 package app.audio.Files;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,40 +11,23 @@ import java.util.List;
  */
 @Getter
 public final class Song extends AudioFile {
+    @Getter
     private final String album;
+    @Getter
     private final ArrayList<String> tags;
+    @Getter
     private final String lyrics;
+    @Getter
     private final String genre;
+    @Getter
     private final Integer releaseYear;
+    @Getter
     private final String artist;
+    @Getter
     private Integer likes;
-
-    public String getAlbum() {
-        return album;
-    }
-
-    public ArrayList<String> getTags() {
-        return tags;
-    }
-
-    public String getLyrics() {
-        return lyrics;
-    }
-
-    public String getGenre() {
-        return genre;
-    }
-    public Integer getLikes() {
-        return likes;
-    }
-
-    public Integer getReleaseYear() {
-        return releaseYear;
-    }
-
-    public String getArtist() {
-        return artist;
-    }
+    @Getter
+    @Setter
+    private double revenue;
 
     /**
      * Instantiates a new Song.
@@ -68,6 +52,7 @@ public final class Song extends AudioFile {
         this.releaseYear = releaseYear;
         this.artist = artist;
         this.likes = 0;
+        revenue = 0.0;
     }
 
     @Override

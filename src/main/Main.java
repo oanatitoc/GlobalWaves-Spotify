@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import fileio.input.CommandInput;
 import fileio.input.LibraryInput;
+import org.checkerframework.checker.units.qual.C;
 
 import java.io.File;
 import java.io.IOException;
@@ -147,7 +148,11 @@ public final class Main {
                 case "nextPage" -> outputs.add(CommandRunner.nextPage(command));
                 case "loadRecommendations" -> outputs.add(CommandRunner.loadRecommendations(command));
                 case "wrapped" -> outputs.add(CommandRunner.wrapped(command));
-                //default -> System.out.println("Invalid command " + commandName);
+
+                case "buyPremium" -> outputs.add(CommandRunner.buyPremium(command));
+                case "cancelPremium" -> outputs.add(CommandRunner.cancelPremium(command));
+                case "adBreak" -> outputs.add(CommandRunner.adBreak(command));
+                default -> System.out.println("Invalid command " + commandName);
             }
         }
         outputs.add(CommandRunner.endProgram());

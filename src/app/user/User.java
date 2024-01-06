@@ -104,6 +104,9 @@ public final class User extends UserAbstract {
     private List<SongInfo> songsInfos;
     @Getter
     @Setter
+    private List<SongInfo> songsInfosPremium;
+    @Getter
+    @Setter
     private List<AlbumInfo> albumsInfos;
     @Getter
     @Setter
@@ -114,7 +117,9 @@ public final class User extends UserAbstract {
     private Player copyPlayer;
 
     private boolean hasAccessedData; //in order to check if there is any data available for this user for wrapped command
-
+    @Getter
+    @Setter
+    private boolean premium;
     public boolean isHasAccessedData() {
         return hasAccessedData;
     }
@@ -153,10 +158,12 @@ public final class User extends UserAbstract {
         artistsInfos = new ArrayList<>();
         genresInfos = new ArrayList<>();
         songsInfos = new ArrayList<>();
+        songsInfosPremium = new ArrayList<>();
         albumsInfos = new ArrayList<>();
         episodesInfos = new ArrayList<>();
         copyPlayer = new Player();
         hasAccessedData = false;
+        premium = false;
 
     }
 

@@ -23,6 +23,7 @@ import fileio.input.UserInput;
 import lombok.Getter;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -1226,6 +1227,7 @@ public final class Admin {
             //update songInfos for artist and for user
             List<SongInfo> songsInfos = artist.getSongsInfos();
             List<SongInfo> songsInfosUser = user.getSongsInfos();
+            List<SongInfo> songsInfosUserPremium = user.getSongsInfosPremium();
             //update the GenreInfos for users
             List<GenreInfo> genreInfos = user.getGenresInfos();
             // contour for the remained duration of songs
@@ -1274,7 +1276,17 @@ public final class Admin {
                         genreInfos.stream()
                                 .filter(sg -> sg.getName().equals(song.getGenre()))
                                 .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
-
+                    }
+                    // update song info for premium users
+                    if (user.isPremium()) {
+                        if (!songsInfosUserPremium.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
+                            songsInfosUserPremium.add(new SongInfo(song.getName(), 1));
+                        } else {
+                            songsInfosUserPremium.stream()
+                                    .filter(sg -> sg.getName().equals(song.getName()))
+                                    .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
+                        }
+                        user.setSongsInfosPremium(songsInfosUserPremium);
                     }
                     user.setGenresInfos(genreInfos);
                     artist.setSongsInfos(songsInfos);
@@ -1359,6 +1371,18 @@ public final class Admin {
                         .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
             }
             user.setSongsInfos(songsInfosUser);
+
+            List<SongInfo> songsInfosUserPremium = user.getSongsInfosPremium();
+            if (user.isPremium()) {
+                if (!songsInfosUserPremium.stream().anyMatch(sg -> sg.getName().equals(song.getName()))) {
+                    songsInfosUserPremium.add(new SongInfo(song.getName(), 1));
+                } else {
+                    songsInfosUserPremium.stream()
+                            .filter(sg -> sg.getName().equals(song.getName()))
+                            .forEach(sg -> sg.setNoListen(sg.getNoListen() + 1));
+                }
+                user.setSongsInfosPremium(songsInfosUserPremium);
+            }
 
             // updates album info for artist and user
             List<AlbumInfo> albumsInfos = artist.getAlbumsInfos();
@@ -1468,6 +1492,110 @@ public final class Admin {
         user.arrangeStatistics();
 
         return user.formattedStatisticsUser();
+    }
+
+    public String buyPremium(final CommandInput commandInput) {
+        User user = Admin.instance.getUser(commandInput.getUsername());
+        if (user == null) {
+            return "The username %s doesn't exist.".formatted(commandInput.getUsername());
+        }
+        if(user.isPremium()) {
+            return "%s is already a premium user.".formatted(user.getUsername());
+        }
+        if (user.getCopyPlayer() != null && user.getCopyPlayer().getUpdatedTimestamp() != commandInput.getTimestamp()) {
+            updateStatistics(user.getCopyPlayer().getLoadTimestamp(),
+                    user.getCopyPlayer().getUpdatedTimestamp(),
+                    commandInput.getTimestamp(),
+                    user);
+            user.getCopyPlayer().setUpdatedTimestamp(commandInput.getTimestamp());
+        }
+        user.setPremium(true);
+        return "%s bought the subscription successfully.".formatted(user.getUsername());
+    }
+
+    public String cancelPremium(final CommandInput commandInput) {
+        User user = Admin.instance.getUser(commandInput.getUsername());
+        if (user == null) {
+            return "The username %s doesn't exist.".formatted(commandInput.getUsername());
+        }
+        if(!user.isPremium()) {
+            return "%s is not a premium user.".formatted(user.getUsername());
+        }
+
+        if (user.getCopyPlayer() != null && user.getCopyPlayer().getUpdatedTimestamp() != commandInput.getTimestamp()) {
+            updateStatistics(user.getCopyPlayer().getLoadTimestamp(),
+                    user.getCopyPlayer().getUpdatedTimestamp(),
+                    commandInput.getTimestamp(),
+                    user);
+            user.getCopyPlayer().setUpdatedTimestamp(commandInput.getTimestamp());
+        }
+
+        user.setPremium(false);
+        return "%s cancelled the subscription successfully.".formatted(user.getUsername());
+    }
+    public double calculateRevenueForSong(User user, String songName) {
+        int totalNumberOfListens = 0;
+        int numberOfListensForSong = 0;
+        List<SongInfo> songinfos = user.getSongsInfosPremium();
+        for (SongInfo song : songinfos) {
+            totalNumberOfListens += song.getNoListen();
+            if (song.getName().equals(songName)) {
+                numberOfListensForSong = song.getNoListen();
+            }
+        }
+        return ((double) 1000000 / totalNumberOfListens) * numberOfListensForSong;
+    }
+    public void updateSongsRevenues() {
+        for (String username : getAllUsers()) {
+            User user = getUser(username);
+            if (user != null) {
+                for (SongInfo songInfo : user.getSongsInfosPremium()) {
+                    List<Song> allSongs = getSongs();
+                    for (Song song : allSongs) {
+                        if (song.getName().equals(songInfo.getName())) {
+                            double revenue = calculateRevenueForSong(user, song.getName());
+                            song.setRevenue(song.getRevenue() + revenue);
+                        }
+                    }
+                }
+            }
+        }
+        List <Artist> artists = getArtists();
+        for (Artist artist : artists) {
+            List<Song> songs = new ArrayList<>(artist.getAllSongs());
+            //chatGPT
+            List<Song> distinctSongs = new ArrayList<>(songs.stream()
+                    .collect(Collectors.toMap(Song::getName, Function.identity(), (existing, replacement) -> existing))
+                    .values()
+                    .stream()
+                    .collect(Collectors.toList()));
+
+            double maxRevenue = 0.0;
+            double songRevenue = 0.0;
+            for (Song song : distinctSongs) {
+                songRevenue += song.getRevenue();
+                if (song.getRevenue() > maxRevenue ||
+                        (song.getRevenue() == maxRevenue && song.getRevenue() != 0
+                                && song.getName().compareTo(artist.getMostProfitableSong()) < 0)) {
+                        maxRevenue = song.getRevenue();
+                        artist.setMostProfitableSong(song.getName());
+                }
+            }
+            songRevenue = Math.round(songRevenue * 100.0) / 100.0;
+            artist.setSongRevenue(songRevenue);
+        }
+    }
+    public String adBreak(CommandInput commandInput) {
+        User user = getUser(commandInput.getUsername());
+        if (user == null) {
+            return "The username %s doesn't exist.".formatted(commandInput.getUsername());
+        }
+        if (user.getPlayer().getSource() == null) {
+            return "%s is not playing any music.".formatted(user.getUsername());
+        }
+        // calculate songRevenue
+        // empty the List of Songs
+        return "Ad inserted successfully.";
     }
 
 }
