@@ -6,8 +6,9 @@ import app.audio.Collections.PodcastOutput;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.user.*;
-import com.fasterxml.jackson.databind.JsonNode;
+import app.user.Entities.Notification;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
 
@@ -799,12 +800,12 @@ public final class CommandRunner {
     }
 
     public static ObjectNode getNotification(final CommandInput commandInput) {
-        List<Notification> notifications = admin.getNotifications(commandInput);
+        ArrayNode notifications = admin.getNotifications(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("notifications", objectMapper.valueToTree(notifications));
+        objectNode.put("notifications", notifications);
 
         return objectNode;
     }

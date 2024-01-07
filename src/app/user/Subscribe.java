@@ -1,5 +1,7 @@
 package app.user;
 
+import app.user.Entities.Notification;
+
 import java.util.ArrayList;
 import java.util.List;
 

@@ -8,12 +8,19 @@ import app.audio.Files.AudioFile;
 import app.audio.Files.Episode;
 import app.audio.Files.Song;
 import app.pages.Command;
+import app.pages.FactoryPages.HomePageFactory;
+import app.pages.FactoryPages.LikedContentPageFactory;
 import app.pages.NextPage;
 import app.pages.Page;
 import app.pages.PreviousPage;
 import app.player.Player;
 import app.user.*;
+import app.user.Entities.Announcement;
+import app.user.Entities.Event;
+import app.user.Entities.Merchandise;
+import app.user.Entities.Notification;
 import app.user.Statistics.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
 import fileio.input.EpisodeInput;
@@ -372,7 +379,9 @@ public final class Admin {
                 List<String> names = userSubscribes.getNames();
                 if (names.contains(commandInput.getUsername())) {
                     Notification notification = new Notification("New Album", "New Album from " + commandInput.getUsername() + ".");
-                    userSubscribes.getNotifications().add(notification);
+                    notification.addObserver(user.getListManager());
+                    notification.notifyObservers();
+                    //userSubscribes.getNotifications().add(notification);
                 }
             }
         }
@@ -562,7 +571,9 @@ public final class Admin {
                 List<String> names = userSubscribes.getNames();
                 if (names.contains(commandInput.getUsername())) {
                     Notification notification = new Notification("New Event", "New Event from " + commandInput.getUsername() + ".");
-                    userSubscribes.getNotifications().add(notification);
+                    notification.addObserver(user.getListManager());
+                    notification.notifyObservers();
+                    //userSubscribes.getNotifications().add(notification);
                 }
             }
         }
@@ -655,7 +666,9 @@ public final class Admin {
                 List<String> names = userSubscribes.getNames();
                 if (names.contains(commandInput.getUsername())) {
                     Notification notification = new Notification("New Merchandise", "New Merchandise from " + commandInput.getUsername() + ".");
-                    userSubscribes.getNotifications().add(notification);
+                    notification.addObserver(user.getListManager());
+                    notification.notifyObservers();
+                    //userSubscribes.getNotifications().add(notification);
                 }
             }
         }
@@ -748,13 +761,14 @@ public final class Admin {
         }
 
         switch (nextPage) {
-            case "Home" -> user.setCurrentPage(user.getHomePage());
-            case "LikedContent" -> user.setCurrentPage(user.getLikedContentPage());
-            case "Artist", "Host" -> user.setCurrentPage(user.findArtistHostPage());
+            case "Home" -> user.setCurrentPageFactory(new HomePageFactory(user));
+            case "LikedContent" -> user.setCurrentPageFactory(new LikedContentPageFactory(user));
+            case "Artist", "Host" -> user.setCurrentPageFactory(user.findArtistHostPage());
             default -> {
                 return "%s is trying to access a non-existent page.".formatted(username);
             }
         }
+        user.setCurrentPage(user.getCurrentPageFactory().createPage());
         // adding the new Page in the list of user's accessed pages
         List<Page> usersPages = user.getPages();
         usersPages.add(user.getCurrentPage());
@@ -926,7 +940,9 @@ public final class Admin {
                                 List<Notification> notifications = userSubscribes.getNotifications();
                                 for (Notification notification : notifications) {
                                     if (notification.getDescription().contains(name)) {
-                                        notifications.remove(notification);
+                                        notification.removeObserver(user.getListManager());
+                                        notification.notifyObservers();
+                                        //notifications.remove(notification);
                                     }
                                 }
                                 return user.getUsername() + " unsubscribed from " + artist.getUsername() + " successfully.";
@@ -949,7 +965,9 @@ public final class Admin {
                             List<Notification> notifications = userSubscribes.getNotifications();
                             for (Notification notification : notifications) {
                                 if (notification.getDescription().contains(name)) {
-                                    notifications.remove(notification);
+                                    notification.removeObserver(user.getListManager());
+                                    notification.notifyObservers();
+                                    //notifications.remove(notification);
                                 }
                             }
                             return user.getUsername() + " unsubscribed from " + host.getUsername() + " successfully.";
@@ -964,13 +982,14 @@ public final class Admin {
         return null;
     }
 
-    public List<Notification> getNotifications(final CommandInput commandInput) {
+    public ArrayNode getNotifications(final CommandInput commandInput) {
         User user = Admin.getInstance().getUser(commandInput.getUsername());
         Subscribe userSubscribe = user.getSubscribes();
         List<Notification> notifications = new ArrayList<>(userSubscribe.getNotifications());
-        userSubscribe.getNotifications().clear();
+        //userSubscribe.getNotifications().clear();
         user.setLastNotifiedTime(commandInput.getTimestamp());
-        return notifications;
+        return user.getListManager().displayNotifications();
+        //return notifications;
     }
 
     public String buyMerch(final CommandInput commandInput) {

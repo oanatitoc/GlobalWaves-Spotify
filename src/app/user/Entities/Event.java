@@ -1,4 +1,4 @@
-package app.user;
+package app.user.Entities;
 
 /**
  * The type Event.

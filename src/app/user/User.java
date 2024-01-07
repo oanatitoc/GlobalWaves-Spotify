@@ -3,24 +3,26 @@ package app.user;
 import app.Admin;
 import app.audio.Collections.*;
 import app.audio.Files.AudioFile;
-import app.audio.Files.Episode;
 import app.audio.Files.Song;
 import app.audio.LibraryEntry;
 import app.pages.*;
+import app.pages.FactoryPages.ArtistPageFactory;
+import app.pages.FactoryPages.HostPageFactory;
+import app.pages.FactoryPages.PageFactory;
 import app.player.Player;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.searchBar.SearchBar;
+import app.user.Entities.Merchandise;
+import app.user.Entities.NotificationListManager;
 import app.user.Statistics.*;
 import app.utils.Enums;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
-import fileio.input.EpisodeInput;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.print.DocFlavor;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -120,6 +122,19 @@ public final class User extends UserAbstract {
     @Getter
     @Setter
     private boolean premium;
+    private PageFactory currentPageFactory;
+    @Getter
+    NotificationListManager listManager = new NotificationListManager();
+
+    public void setCurrentPageFactory(PageFactory currentPageFactory) {
+        this.currentPageFactory = currentPageFactory;
+    }
+    public PageFactory getCurrentPageFactory() {
+        return currentPageFactory;
+    }
+//    public Page getCurrentPage() {
+//        return currentPageFactory.createPage();
+//    }
     public boolean isHasAccessedData() {
         return hasAccessedData;
     }
@@ -712,14 +727,14 @@ public final class User extends UserAbstract {
         player.simulatePlayer(time);
     }
 
-    public Page findArtistHostPage() {
+    public PageFactory findArtistHostPage() {
         if (player.getCurrentAudioFile() != null || player.getCurrentAudioCollection() != null) {
             String currentAudioFileName = player.getCurrentAudioFile().getName();
             // check if current AudioFile is a song
             for (Song song : Admin.getInstance().getSongs()) {
                 if (song.getName().equals(currentAudioFileName)) {
                     Artist artist = Admin.getInstance().getArtist(song.getArtist());
-                    return artist.getPage();
+                    return new ArtistPageFactory(artist);
                 }
             }
             String currentAudioCollectionName = player.getCurrentAudioCollection().getName();
@@ -727,11 +742,11 @@ public final class User extends UserAbstract {
             for (Podcast podcast : Admin.getInstance().getPodcasts()) {
                 if (podcast.getName().equals(currentAudioCollectionName)) {
                     Host host = Admin.getInstance().getHost(podcast.getOwner());
-                    return host.getPage();
+                    return new HostPageFactory(host);
                 }
             }
         }
-        return currentPage;
+        return (PageFactory) currentPage;
     }
 
     public void nextPage() {
