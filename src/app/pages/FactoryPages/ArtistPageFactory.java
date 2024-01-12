@@ -1,13 +1,13 @@
 package app.pages.FactoryPages;
 
 import app.pages.ArtistPage;
-import app.pages.Page;
+import app.pages.CommandNextPrev.Page;
 import app.user.Artist;
 
-public class ArtistPageFactory implements PageFactory {
+public final class ArtistPageFactory implements PageFactory {
     private final Artist artist;
 
-    public ArtistPageFactory(Artist artist) {
+    public ArtistPageFactory(final Artist artist) {
         this.artist = artist;
     }
 

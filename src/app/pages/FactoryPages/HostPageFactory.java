@@ -1,13 +1,13 @@
 package app.pages.FactoryPages;
 
 import app.pages.HostPage;
-import app.pages.Page;
+import app.pages.CommandNextPrev.Page;
 import app.user.Host;
 
-public class HostPageFactory implements PageFactory {
+public final class HostPageFactory implements PageFactory {
     private final Host host;
 
-    public HostPageFactory(Host host) {
+    public HostPageFactory(final Host host) {
         this.host = host;
     }
 

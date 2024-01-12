@@ -9,11 +9,9 @@ import java.util.ArrayList;
  */
 @Getter
 public abstract class LibraryEntry {
+    @Getter
     private final String name;
 
-    public String getName() {
-        return name;
-    }
 
     /**
      * Instantiates a new Library entry.

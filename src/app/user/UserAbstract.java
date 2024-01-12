@@ -75,6 +75,7 @@ public abstract class UserAbstract {
         this.city = city;
     }
 
+
     /**
      * User type string.
      *

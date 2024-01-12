@@ -1,13 +1,13 @@
 package app.pages.FactoryPages;
 
 import app.pages.HomePage;
-import app.pages.Page;
+import app.pages.CommandNextPrev.Page;
 import app.user.User;
 
-public class HomePageFactory implements PageFactory {
+public final class HomePageFactory implements PageFactory {
     private final User user;
 
-    public HomePageFactory(User user) {
+    public HomePageFactory(final User user) {
         this.user = user;
     }
 

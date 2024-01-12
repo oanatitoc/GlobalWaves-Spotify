@@ -6,7 +6,7 @@ import app.audio.Collections.PodcastOutput;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.user.*;
-import app.user.Entities.Notification;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,7 +23,6 @@ public final class CommandRunner {
      */
     private static ObjectMapper objectMapper = new ObjectMapper();
     private static Admin admin;
-    private static final int maxInt =  2147483647;
 
     /**
      * Update admin.
@@ -799,6 +798,12 @@ public final class CommandRunner {
         return objectNode;
     }
 
+    /**
+     * Gets the notifications.
+     *
+     * @param commandInput the command input
+     * @return the notifications
+     */
     public static ObjectNode getNotification(final CommandInput commandInput) {
         ArrayNode notifications = admin.getNotifications(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -810,6 +815,12 @@ public final class CommandRunner {
         return objectNode;
     }
 
+    /**
+     * Adds the price of the merch in the merchRevenue statistics of artist
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode buyMerch(final CommandInput commandInput) {
         String message = Admin.getInstance().buyMerch(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -820,6 +831,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Prints the merchandises
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode seeMerch(final CommandInput commandInput) {
         List<String> result = Admin.getInstance().seeMerch(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -831,6 +849,12 @@ public final class CommandRunner {
         return objectNode;
     }
 
+    /**
+     * Updates the user's list of recommendations
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode updateRecommendations(final CommandInput commandInput) {
         String message = Admin.getInstance().updateRecommendations(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -841,6 +865,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Navigate to the previous page
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode previousPage(final CommandInput commandInput) {
         String message = Admin.getInstance().previousPage(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -851,6 +882,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Navigate to the next page
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode nextPage(final CommandInput commandInput) {
         String message = Admin.getInstance().nextPage(commandInput);
         ObjectNode objectNode = objectMapper.createObjectNode();
@@ -861,6 +899,12 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Loads the last recommendation of the user
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode loadRecommendations(final CommandInput commandInput) {
         User user = admin.getUser(commandInput.getUsername());
         String message = user.loadRecommendations();
@@ -873,6 +917,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Shows all statistics about the user/artist/host
+     *
+     * @param commandInput the command input
+     * @return
+     */
     public static ObjectNode wrapped(final CommandInput commandInput) {
 
 
@@ -883,15 +934,15 @@ public final class CommandRunner {
         User user = Admin.getInstance().getUser(commandInput.getUsername());
         Artist artist = Admin.getInstance().getArtist(commandInput.getUsername());
         ObjectNode result = Admin.getInstance().wrapped(commandInput);
-        if(user != null) {
-            if (!user.isHasAccessedData()) {
+        if (user != null) {
+            if (!user.isAccessedData()) {
                 String message = "No data to show for user " + user.getUsername() + ".";
                 objectNode.put("message", message);
                 return objectNode;
             }
         }
-        if(artist != null) {
-            if (!artist.isHasAccessedData()) {
+        if (artist != null) {
+            if (!artist.isAccessedData()) {
                 String message = "No data to show for artist " + artist.getUsername() + ".";
                 objectNode.put("message", message);
                 return objectNode;
@@ -902,6 +953,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Makes a user premium (if possible)
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode buyPremium(final CommandInput commandInput) {
         String message = Admin.getInstance().buyPremium(commandInput);
 
@@ -913,6 +971,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Cancels the premium status of a user (if possible)
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
     public static ObjectNode cancelPremium(final CommandInput commandInput) {
         String message = Admin.getInstance().cancelPremium(commandInput);
 
@@ -924,6 +989,13 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Adds an ad after the current source played by the user
+     *
+     * @param commandInput the command input
+     * @return the command input
+     */
     public static ObjectNode adBreak(final CommandInput commandInput) {
         String message = Admin.getInstance().adBreak(commandInput);
 
@@ -935,18 +1007,18 @@ public final class CommandRunner {
 
         return objectNode;
     }
+
+    /**
+     * Setting all the statistics of the artists whose songs have been listened
+     *
+     * @return the object node
+     */
     public static ObjectNode endProgram() {
         Map<String, Map<String, Object>> result = new LinkedHashMap<>();
         List<Artist> artists = new ArrayList<>(Admin.getInstance().getArtists());
-        // update the statistics for all users in order to get the songRevenue of all artists
-//        for(String username : Admin.getInstance().getOnlineUsers()) {
-//            User user = Admin.getInstance().getUser(username);
-//            if (user.getCopyPlayer() != null) {
-//                Admin.getInstance().updateStatistics(user.getCopyPlayer().getLoadTimestamp(),
-//                        user.getCopyPlayer().getUpdatedTimestamp(), maxInt, user);
-//            }
-//        }
+
         Admin.getInstance().updateSongsRevenues();
+
         // sort the artists given their total amount of money
         Comparator<Artist> artistComparator = Comparator
                 .comparing(Artist::getMerchRevenue)
@@ -954,9 +1026,12 @@ public final class CommandRunner {
                 .reversed()
                 .thenComparing(Artist::getUsername);
         Collections.sort(artists, artistComparator);
+
+
         int rankingValue = 1;
         for (Artist artist : artists) {
-            if(artist.getNoPlays() != 0 || artist.getMerchRevenue() != 0 || artist.getSongRevenue() != 0) {
+            if (artist.getNoPlays() != 0 || artist.getMerchRevenue() != 0
+                    || artist.getSongRevenue() != 0) {
                 Map<String, Object> artistInfo = new LinkedHashMap<>();
                 artistInfo.put("merchRevenue", artist.getMerchRevenue());
                 artistInfo.put("songRevenue", artist.getSongRevenue());
@@ -967,13 +1042,15 @@ public final class CommandRunner {
             }
 
         }
+
         ObjectNode objectNode = objectMapper.createObjectNode();
 
         objectNode.put("command", "endProgram");
-        if (result.isEmpty())
+        if (result.isEmpty()) {
             objectNode.put("result", objectMapper.createObjectNode());
-        else
+        } else {
             objectNode.put("result", objectMapper.valueToTree(result));
-        return objectNode;
+        }
+            return objectNode;
     }
 }

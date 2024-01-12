@@ -2,9 +2,9 @@ package app.pages;
 
 import app.audio.Collections.Playlist;
 import app.audio.Files.Song;
+import app.pages.CommandNextPrev.Page;
 import app.user.User;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -33,7 +33,8 @@ public final class HomePage implements Page {
 
     @Override
     public String printCurrentPage() {
-        return "Liked songs:\n\t%s\n\nFollowed playlists:\n\t%s\n\nSong recommendations:\n\t%s\n\nPlaylists recommendations:\n\t%s"
+        return ("Liked songs:\n\t%s\n\nFollowed playlists:\n\t%s\n\nSong recommendations:"
+                + "\n\t%s\n\nPlaylists recommendations:\n\t%s")
                .formatted(likedSongs.stream()
                                     .sorted(Comparator.comparing(Song::getLikes)
                                     .reversed()).limit(limit).map(Song::getName)

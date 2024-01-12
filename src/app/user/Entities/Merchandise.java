@@ -16,7 +16,8 @@ public final class Merchandise {
      * @param description the description
      * @param price       the price
      */
-    public Merchandise(final String name, final String description, final int price, final int timestamp) {
+    public Merchandise(final String name, final String description, final int price,
+                       final int timestamp) {
         this.name = name;
         this.description = description;
         this.price = price;

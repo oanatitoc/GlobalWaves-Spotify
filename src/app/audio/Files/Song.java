@@ -28,6 +28,9 @@ public final class Song extends AudioFile {
     @Getter
     @Setter
     private double revenue;
+    @Getter
+    @Setter
+    private int noListen = 0;
 
     /**
      * Instantiates a new Song.

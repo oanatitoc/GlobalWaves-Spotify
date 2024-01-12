@@ -1,6 +1,6 @@
 package app.user.Statistics;
 
-import app.audio.Files.Song;
+import app.user.Statistics.Infos.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,19 +9,19 @@ import java.util.List;
 @Getter
 public class WrappedUser {
     @Setter
-    public List<ArtistInfo> topArtists;
+    private List<Infos> topArtists;
     @Setter
-    public List<GenreInfo> topGenres;
+    private List<Infos> topGenres;
     @Setter
-    public List<SongInfo> topSongs;
+    private List<Infos> topSongs;
     @Setter
-    public List<AlbumInfo> topAlbums;
+    private List<Infos> topAlbums;
     @Setter
-    public List<EpisodeInfo> topEpisodes;
+    private List<Infos> topEpisodes;
 
-    public WrappedUser(List<ArtistInfo> topArtists, List<GenreInfo> topGenres,
-                       List<SongInfo> topSongs, List<AlbumInfo> topAlbums,
-                       List<EpisodeInfo> topEpisodes) {
+    public WrappedUser(final List<Infos> topArtists, final List<Infos> topGenres,
+                       final List<Infos> topSongs, final List<Infos> topAlbums,
+                       final List<Infos> topEpisodes) {
         this.topArtists = topArtists;
         this.topGenres = topGenres;
         this.topSongs = topSongs;

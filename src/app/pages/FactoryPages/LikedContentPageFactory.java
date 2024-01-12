@@ -1,13 +1,13 @@
 package app.pages.FactoryPages;
 
 import app.pages.LikedContentPage;
-import app.pages.Page;
+import app.pages.CommandNextPrev.Page;
 import app.user.User;
 
-public class LikedContentPageFactory implements PageFactory {
+public final class LikedContentPageFactory implements PageFactory {
     private final User user;
 
-    public LikedContentPageFactory(User user) {
+    public LikedContentPageFactory(final User user) {
         this.user = user;
     }
 

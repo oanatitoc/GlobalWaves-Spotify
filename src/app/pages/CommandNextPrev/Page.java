@@ -1,4 +1,4 @@
-package app.pages;
+package app.pages.CommandNextPrev;
 
 /**
  * The interface Page.

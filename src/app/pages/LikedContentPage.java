@@ -2,6 +2,7 @@ package app.pages;
 
 import app.audio.Collections.Playlist;
 import app.audio.Files.Song;
+import app.pages.CommandNextPrev.Page;
 import app.user.User;
 
 import java.util.List;

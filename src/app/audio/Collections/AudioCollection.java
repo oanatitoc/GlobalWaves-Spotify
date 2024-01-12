@@ -9,11 +9,9 @@ import lombok.Getter;
  */
 @Getter
 public abstract class AudioCollection extends LibraryEntry {
+    @Getter
     private final String owner;
 
-    public String getOwner() {
-        return owner;
-    }
 
     /**
      * Instantiates a new Audio collection.

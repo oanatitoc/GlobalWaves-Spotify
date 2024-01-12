@@ -6,6 +6,9 @@ import app.audio.Files.AudioFile;
 import app.audio.Files.Song;
 import app.audio.LibraryEntry;
 import app.pages.*;
+import app.pages.CommandNextPrev.Page;
+import app.user.Entities.AdBreak;
+import app.user.Statistics.*;
 import app.pages.FactoryPages.ArtistPageFactory;
 import app.pages.FactoryPages.HostPageFactory;
 import app.pages.FactoryPages.PageFactory;
@@ -14,8 +17,8 @@ import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.searchBar.SearchBar;
 import app.user.Entities.Merchandise;
-import app.user.Entities.NotificationListManager;
-import app.user.Statistics.*;
+import app.user.Entities.Notifications.NotificationListManager;
+import app.user.Statistics.Infos.*;
 import app.utils.Enums;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -27,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The type User.
@@ -42,7 +46,6 @@ public final class User extends UserAbstract {
     @Setter
     private ArrayList<Playlist> followedPlaylists;
     @Getter
-    @Setter
     private final Player player;
     @Getter
     @Setter
@@ -79,10 +82,10 @@ public final class User extends UserAbstract {
     private ArrayList<Playlist> playlistsRecommendations;
     @Getter
     @Setter
-    private List<Page> pages;
+    private List<Page> pages; // the list of pages to navigate through
     @Getter
     @Setter
-    private int currentIndex;
+    private int currentIndex; // the current index of page from the list of pages
     @Getter
     @Setter
     private LibraryEntry lastRecommendation;
@@ -97,51 +100,47 @@ public final class User extends UserAbstract {
     private WrappedUser statistics;
     @Getter
     @Setter
-    private List<ArtistInfo> artistsInfos;
+    private List<Infos> artistsInfos;
     @Getter
     @Setter
-    private List<GenreInfo> genresInfos;
+    private List<Infos> genresInfos;
     @Getter
     @Setter
-    private List<SongInfo> songsInfos;
+    private List<Infos> songsInfos;
     @Getter
     @Setter
-    private List<SongInfo> songsInfosPremium;
+    private List<Infos> songsInfosPremium;
     @Getter
     @Setter
-    private List<AlbumInfo> albumsInfos;
+    private List<Infos> songsInfosFree;
     @Getter
     @Setter
-    private List<EpisodeInfo> episodesInfos;
+    private List<Infos> albumsInfos;
+    @Getter
+    @Setter
+    private List<Infos> episodesInfos;
 
     @Setter
     @Getter
-    private Player copyPlayer;
-
-    private boolean hasAccessedData; //in order to check if there is any data available for this user for wrapped command
+    private Player copyPlayer; // a copy of the player used to update the general statistics
     @Getter
     @Setter
-    private boolean premium;
+    private boolean accessedData; // checks if user has accessed any source
+    @Getter
+    @Setter
+    private boolean premium; // tells if the user is a premium user or not
+    @Getter
+    @Setter
     private PageFactory currentPageFactory;
     @Getter
-    NotificationListManager listManager = new NotificationListManager();
-
-    public void setCurrentPageFactory(PageFactory currentPageFactory) {
-        this.currentPageFactory = currentPageFactory;
-    }
-    public PageFactory getCurrentPageFactory() {
-        return currentPageFactory;
-    }
-//    public Page getCurrentPage() {
-//        return currentPageFactory.createPage();
-//    }
-    public boolean isHasAccessedData() {
-        return hasAccessedData;
-    }
-
-    public void setHasAccessedData(boolean hasAccessedData) {
-        this.hasAccessedData = hasAccessedData;
-    }
+    private final NotificationListManager listManager = new NotificationListManager();
+    @Getter
+    @Setter
+    private List<Artist> artistsListened = new ArrayList<>();
+    @Getter
+    @Setter
+    private AdBreak adBreak;
+    private final int five = 5;
 
     /**
      * Instantiates a new User.
@@ -161,7 +160,6 @@ public final class User extends UserAbstract {
         searchBar = new SearchBar(username);
         lastSearched = false;
         status = true;
-
         homePage = new HomePage(this);
         currentPage = homePage;
         likedContentPage = new LikedContentPage(this);
@@ -174,11 +172,14 @@ public final class User extends UserAbstract {
         genresInfos = new ArrayList<>();
         songsInfos = new ArrayList<>();
         songsInfosPremium = new ArrayList<>();
+        songsInfosFree = new ArrayList<>();
         albumsInfos = new ArrayList<>();
         episodesInfos = new ArrayList<>();
         copyPlayer = new Player();
-        hasAccessedData = false;
+        accessedData = false;
         premium = false;
+        adBreak = new AdBreak(0);
+        adBreak.AdBreakInQueue = false;
 
     }
 
@@ -194,10 +195,14 @@ public final class User extends UserAbstract {
      * @param type    the type
      * @return the array list
      */
-    public ArrayList<String> search(final Filters filters, final String type, CommandInput commandInput) {
+    public ArrayList<String> search(final Filters filters, final String type,
+                                    final CommandInput commandInput) {
         searchBar.clearSelection();
-        Admin.getInstance().updateStatistics(copyPlayer.getLoadTimestamp(), copyPlayer.getUpdatedTimestamp(),
-                commandInput.getTimestamp(), Admin.getInstance().getUser(commandInput.getUsername()));
+
+        // we update the statistics before searching another source
+        Admin.getInstance().updateStatistics(commandInput.getTimestamp(),
+                Admin.getInstance().getUser(commandInput.getUsername()));
+
         player.stop();
 
         lastSearched = true;
@@ -263,7 +268,7 @@ public final class User extends UserAbstract {
      *
      * @return the string
      */
-    public String load(CommandInput commandInput) {
+    public String load(final CommandInput commandInput) {
         if (!status) {
             copyPlayer = null;
             return "%s is offline.".formatted(getUsername());
@@ -280,7 +285,6 @@ public final class User extends UserAbstract {
             return "You can't load an empty audio collection!";
         }
 
-
         player.setSource(searchBar.getLastSelected(), searchBar.getLastSearchType());
         searchBar.clearSelection();
 
@@ -288,21 +292,24 @@ public final class User extends UserAbstract {
 
         // update the number of Plays of an artist
         if (player.getType().equals("song")) {
-            for (Song song : Admin.getInstance().getSongs()) {
-                if (song.getName().equals(player.getCurrentAudioFile().getName())) {
-                    String artistName = song.getArtist();
-                    for (Artist artist : Admin.getInstance().getArtists()) {
-                        if (artist.getUsername().equals(artistName)) {
-                            artist.setNoPlays(artist.getNoPlays() + 1);
-                        }
-                    }
-                }
-            }
+            String songName = player.getCurrentAudioFile().getName();
+            Song song = Admin.getInstance().getSongs()
+                    .stream()
+                    .filter(sg -> sg.getName()
+                            .equals(songName))
+                    .findFirst()
+                    .orElse(null);
+            Artist artist = Admin.getInstance().getArtist(song.getArtist());
+            artist.setNoPlays(artist.getNoPlays() + 1);
         }
-        copyPlayer = new Player(player.getRepeatMode(), player.getShuffle(), player.getPaused(),
-                player.getSource(), player.getType(), player.getBookmarks());
+
+        // update the copyPlayer
+        copyPlayer = new Player(player.getSource(), player.getType());
+        // set the time when the source was load in the copyPlayer
         copyPlayer.setLoadTimestamp(commandInput.getTimestamp());
+        // set the time when the copyPlayer was last updated
         copyPlayer.setUpdatedTimestamp(commandInput.getTimestamp());
+
         return "Playback loaded successfully.";
     }
 
@@ -727,28 +734,44 @@ public final class User extends UserAbstract {
         player.simulatePlayer(time);
     }
 
-    public PageFactory findArtistHostPage() {
+    /**
+     * Find out if a user has accessed a host or an artist page
+     *
+     * @return the host's or artist's page if they were accessed, or else, the user's current page
+     */
+    public PageFactory findArtistOrHostPage() {
         if (player.getCurrentAudioFile() != null || player.getCurrentAudioCollection() != null) {
             String currentAudioFileName = player.getCurrentAudioFile().getName();
             // check if current AudioFile is a song
-            for (Song song : Admin.getInstance().getSongs()) {
-                if (song.getName().equals(currentAudioFileName)) {
-                    Artist artist = Admin.getInstance().getArtist(song.getArtist());
-                    return new ArtistPageFactory(artist);
-                }
+            Song song = Admin.getInstance().getSongs()
+                            .stream()
+                            .filter(sg -> sg.getName().equals(currentAudioFileName))
+                            .findFirst()
+                            .orElse(null);
+            if (song != null) {
+                Artist artist = Admin.getInstance().getArtist(song.getArtist());
+                return new ArtistPageFactory(artist);
             }
+
             String currentAudioCollectionName = player.getCurrentAudioCollection().getName();
             // check if current AudioFile is a podcast
-            for (Podcast podcast : Admin.getInstance().getPodcasts()) {
-                if (podcast.getName().equals(currentAudioCollectionName)) {
-                    Host host = Admin.getInstance().getHost(podcast.getOwner());
-                    return new HostPageFactory(host);
-                }
+            Podcast podcast = Admin.getInstance().getPodcasts()
+                    .stream()
+                    .filter(podcast1 -> podcast1.getName().equals(currentAudioCollectionName))
+                    .findFirst()
+                    .orElse(null);
+            if (podcast != null) {
+                Host host = Admin.getInstance().getHost(podcast.getOwner());
+                return new HostPageFactory(host);
             }
         }
+        // ELSE, return the current Page of the user
         return (PageFactory) currentPage;
     }
-
+    /**
+     * Navigates to the next page in the collection of pages if the index of the current page
+     * allows it.
+     */
     public void nextPage() {
         if (currentIndex < pages.size() - 1) {
             currentIndex++;
@@ -756,6 +779,10 @@ public final class User extends UserAbstract {
         }
     }
 
+    /**
+     * Navigates to the previous page in the collection of pages if the index of the current page
+     * allows it.
+     */
     public void previousPage() {
         if (currentIndex > 0) {
             currentIndex--;
@@ -763,6 +790,12 @@ public final class User extends UserAbstract {
         }
     }
 
+    /**
+     * This method loads the user's recommendation
+     *
+     * @return A message indicating whether the recommendation load was successful or if there
+     * were any issues.
+     */
     public String loadRecommendations() {
 
         if (!status) {
@@ -780,111 +813,111 @@ public final class User extends UserAbstract {
 
         // update the number of Plays of an artist
         if (player.getType().equals("song")) {
-            for (Song song : Admin.getInstance().getSongs()) {
-                if (song.getName().equals(player.getCurrentAudioFile().getName())) {
-                    String artistName = song.getArtist();
-                    for (Artist artist : Admin.getInstance().getArtists()) {
-                        if (artist.getUsername().equals(artistName)) {
-                            artist.setNoPlays(artist.getNoPlays() + 1);
-                        }
-                    }
-                }
-            }
+            String songName = player.getCurrentAudioFile().getName();
+            Song song = Admin.getInstance().getSongs()
+                                            .stream()
+                                            .filter(sg -> sg.getName()
+                                            .equals(songName))
+                                            .findFirst()
+                                            .orElse(null);
+            Artist artist = Admin.getInstance().getArtist(song.getArtist());
+            artist.setNoPlays(artist.getNoPlays() + 1);
         }
 
         return "Playback loaded successfully.";
     }
 
+    /**
+     * Arranges the top items in a list based on the number of listens and names.
+     * The list will be sorted in descending order by the number of listens,
+     * and for items with the same number of listens, they will be sorted in ascending
+     * order by name.
+     * Only the top 5 items will be retained in the list.
+     *
+     * @param items The list of items to be arranged.
+     * @param <T>   The type of items in the list, must extend the Infos interface.
+     */
+    public <T extends Infos> void arrangeTopItems(final List<T> items) {
+        List<T> top5Items = items.stream()
+                .sorted(Comparator
+                        .comparingInt(Infos::getNoListen)
+                        .reversed()
+                        .thenComparing(Infos::getName))
+                .limit(five)
+                .toList();
 
+        items.clear();
+        items.addAll(top5Items);
+    }
+
+    /**
+     * This method arranges all user's items calling the previous method.
+     * The items in each list implement the Infos interface.
+     */
     public void arrangeStatistics() {
-        List<AlbumInfo> albums = statistics.getTopAlbums();
-        //sortare Albume chatGPT
-        List<AlbumInfo> top5Albums = albums.stream()
-                .sorted(Comparator
-                        .comparingInt(AlbumInfo::getNoListen)
-                        .reversed()
-                        .thenComparing(AlbumInfo::getName))
-                .limit(5)
-                .collect(Collectors.toList());
-        statistics.setTopAlbums(top5Albums);
+        arrangeTopItems(statistics.getTopAlbums());
+        arrangeTopItems(statistics.getTopGenres());
+        arrangeTopItems(statistics.getTopSongs());
 
-        // sortare artisti
-        List<ArtistInfo> artists = statistics.getTopArtists();
-        List<ArtistInfo> top5Artists = artists.stream()
+        List<Infos> artists = statistics.getTopArtists();
+        List<Infos> top5Artists = artists.stream()
                 .sorted(Comparator
-                        .comparingInt(ArtistInfo::getNoListen)
+                        .comparingInt(Infos::getNoListen)
                         .reversed()
-                        .thenComparing(ArtistInfo::getName))
-                .limit(5)
+                        .thenComparing(Infos::getName))
+                .limit(five)
                 .collect(Collectors.toList());
         statistics.setTopArtists(top5Artists);
 
-
-        // sortare genuri
-        List<GenreInfo> genres = statistics.getTopGenres();
-        List<GenreInfo> top5Genres = genres.stream()
-                .sorted(Comparator
-                        .comparingInt(GenreInfo::getNoListen)
-                        .reversed()
-                        .thenComparing(GenreInfo::getName))
-                .limit(5)
-                .collect(Collectors.toList());
-        statistics.setTopGenres(top5Genres);
-
-
-        //sortare cantece
-        List<SongInfo> songs = statistics.getTopSongs();
-        List<SongInfo> top5Songs = songs.stream()
-                .sorted(Comparator
-                        .comparingInt(SongInfo::getNoListen)
-                        .reversed()
-                        .thenComparing(SongInfo::getName))
-                .limit(5)
-                .collect(Collectors.toList());
-        statistics.setTopSongs(top5Songs);
-
     }
+
+    /**
+     * The method creates the object node with user's statistics based on the
+     * information accumulated up to the moment of the "wrapped" command
+     *
+     * @return the object node containing the statistics
+     */
     public ObjectNode formattedStatisticsUser() {
-        // Convertirea obiectului WrappedHost într-un obiect JSON
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode resultNode = objectMapper.createObjectNode();
 
+        // Retrieving user statistics
         WrappedUser wrappedUser = getStatistics();
 
+        // Verifying if the user has accessed any source
+        accessedData = Stream.of(
+                        wrappedUser.getTopArtists(),
+                        wrappedUser.getTopGenres(),
+                        wrappedUser.getTopSongs(),
+                        wrappedUser.getTopAlbums(),
+                        wrappedUser.getTopEpisodes()
+                )
+                .anyMatch(thisList -> thisList != null && !thisList.isEmpty());
+
+        // Creating a JSON object for top artists and adding information
         ObjectNode topArtistsNode = resultNode.putObject("topArtists");
-        // Adăugarea informațiilor despre artistii de top
-        for (ArtistInfo artist : wrappedUser.getTopArtists()) {
-            setHasAccessedData(true);
-            topArtistsNode.put(artist.getName(), artist.getNoListen());
-        }
+        wrappedUser.getTopArtists().forEach(artist -> topArtistsNode.put(artist.getName(),
+                                                                         artist.getNoListen()));
 
+        // Creating a JSON object for top genres and adding information
         ObjectNode topGenresNode = resultNode.putObject("topGenres");
-        // Adăugarea informațiilor despre genurile de top
-        for (GenreInfo genre : wrappedUser.getTopGenres()) {
-            setHasAccessedData(true);
-            topGenresNode.put(genre.getName(), genre.getNoListen());
-        }
+        wrappedUser.getTopGenres().forEach(genre -> topGenresNode.put(genre.getName(),
+                                                                      genre.getNoListen()));
 
+        // Creating a JSON object for top songs and adding information
         ObjectNode topSongsNode = resultNode.putObject("topSongs");
-        // Adăugarea informațiilor despre cantecele de top
-        for (SongInfo song : wrappedUser.getTopSongs()) {
-            setHasAccessedData(true);
-            topSongsNode.put(song.getName(), song.getNoListen());
-        }
+        wrappedUser.getTopSongs().forEach(song -> topSongsNode.put(song.getName(),
+                                                                   song.getNoListen()));
 
+        // Creating a JSON object for top albums and adding information
         ObjectNode topAlbumsNode = resultNode.putObject("topAlbums");
-        // Adăugarea informațiilor despre albumele de top
-        for (AlbumInfo album : wrappedUser.getTopAlbums()) {
-            setHasAccessedData(true);
-            topAlbumsNode.put(album.getName(), album.getNoListen());
-        }
+        wrappedUser.getTopAlbums().forEach(album -> topAlbumsNode.put(album.getName(),
+                                                                      album.getNoListen()));
 
+        // Creating a JSON object for top episodes and adding information
         ObjectNode topEpisodesNode = resultNode.putObject("topEpisodes");
-        // Adăugarea informațiilor despre episoadele de top
-        for (EpisodeInfo episode : wrappedUser.getTopEpisodes()) {
-            setHasAccessedData(true);
-            topEpisodesNode.put(episode.getName(), episode.getNoListen());
-        }
+        wrappedUser.getTopEpisodes().forEach(episode -> topEpisodesNode.put(episode.getName(),
+                                                                        episode.getNoListen()));
 
         return resultNode;
     }

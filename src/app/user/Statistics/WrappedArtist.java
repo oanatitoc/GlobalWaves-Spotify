@@ -1,5 +1,6 @@
 package app.user.Statistics;
 
+import app.user.Statistics.Infos.Infos;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,15 +9,16 @@ import java.util.List;
 @Getter
 public class WrappedArtist {
     @Setter
-    public List<AlbumInfo> topAlbums;
+    private List<Infos> topAlbums;
     @Setter
-    public List<SongInfo> topSongs;
+    private List<Infos> topSongs;
     @Setter
-    public List<String> topFans;
+    private List<String> topFans;
     @Setter
-    public int listeners;
+    private int listeners;
 
-    public WrappedArtist(List<AlbumInfo> topAlbums, List<SongInfo> topSongs, List<String> topFans, int listeners) {
+    public WrappedArtist(final List<Infos> topAlbums, final List<Infos> topSongs,
+                         final List<String> topFans, final int listeners) {
         this.topAlbums = topAlbums;
         this.topSongs = topSongs;
         this.topFans = topFans;

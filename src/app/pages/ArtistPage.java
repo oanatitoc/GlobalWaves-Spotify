@@ -1,6 +1,7 @@
 package app.pages;
 
 import app.audio.Collections.Album;
+import app.pages.CommandNextPrev.Page;
 import app.user.Artist;
 import app.user.Entities.Event;
 import app.user.Entities.Merchandise;

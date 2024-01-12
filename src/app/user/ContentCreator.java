@@ -1,6 +1,6 @@
 package app.user;
 
-import app.pages.Page;
+import app.pages.CommandNextPrev.Page;
 
 /**
  * The type Content creator.

@@ -46,14 +46,9 @@ public final class Player {
         this.paused = true;
     }
 
-    public Player(Enums.RepeatMode repeatMode, boolean shuffle, boolean paused,
-                  PlayerSource source, String type, ArrayList<PodcastBookmark> bookmarks) {
-        this.repeatMode = repeatMode;
-        this.shuffle = shuffle;
-        this.paused = paused;
+    public Player(final PlayerSource source, final String type) {
         this.source = source;
         this.type = type;
-        this.bookmarks = bookmarks;
     }
 
     /**
