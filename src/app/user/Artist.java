@@ -14,7 +14,7 @@ import app.pages.ArtistPage;
 import app.user.Entities.Event;
 import app.user.Entities.Merchandise;
 import app.user.Statistics.*;
-import app.user.Statistics.Infos.Infos;
+import app.user.Statistics.Infos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;

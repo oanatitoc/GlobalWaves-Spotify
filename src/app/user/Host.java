@@ -4,7 +4,7 @@ import app.audio.Collections.Podcast;
 import app.pages.HostPage;
 
 import app.user.Entities.Announcement;
-import app.user.Statistics.Infos.Infos;
+import app.user.Statistics.Infos;
 import app.user.Statistics.WrappedHost;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;

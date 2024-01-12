@@ -1,4 +1,4 @@
-package app.user.Statistics.Infos;
+package app.user.Statistics;
 
 import lombok.Getter;
 import lombok.Setter;

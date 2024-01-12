@@ -18,7 +18,6 @@ import app.user.*;
 import app.user.Entities.*;
 import app.user.Entities.Notifications.Notification;
 import app.user.Statistics.*;
-import app.user.Statistics.Infos.*;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
@@ -59,8 +58,6 @@ public final class Admin {
     private final int maxRevenueforPremium = 1000000;
     private final double hundred = 100.0;
     private final int five = 5;
-    private final int three = 3;
-    private final int minTimeThirty = 30;
 
 
     private Admin() {
@@ -928,7 +925,13 @@ public final class Admin {
         return topPlaylists;
     }
 
-
+    /**
+     * This method finds out if a user has accessed an artist's or host's page and if yes,
+     * it performs an operation of subscription/unsubscription on them
+     *
+     * @param commandInput the command input
+     * @return the message indicating the success or failure to subscribe/unsubscribe
+     */
     public String subscribe(final CommandInput commandInput) {
         User user = getUser(commandInput.getUsername());
 
@@ -937,62 +940,18 @@ public final class Admin {
         }
 
         if (user.userType().equals("user")) {
-            // Iterate through all artists and hosts from system to find if the user is
+            // Iterate through all artists and hosts from system to find if the user is on
             // someone's page
+
             for (Artist artist : getArtists()) {
                 if (user.getCurrentPage() == artist.getPage()) {
-                    Subscribe userSubscribes = user.getSubscribes();
-                    if (userSubscribes != null) {
-                        List<String> names = userSubscribes.getNames();
-                        for (String name : names) {
-                            if (name.equals(artist.getUsername())) {
-                                // we remove the name and the notifications relatet to it
-                                names.remove(name);
-                                List<Notification> notifications = userSubscribes
-                                        .getNotifications();
-                                for (Notification notification : notifications) {
-                                    if (notification.getDescription().contains(name)) {
-                                        notification.removeObserver(user.getListManager());
-                                        notification.notifyObservers();
-                                        //notifications.remove(notification);
-                                    }
-                                }
-                                return user.getUsername() + " unsubscribed from "
-                                        + artist.getUsername()
-                                        + " successfully.";
-                            }
-                        }
-                    }
-                    userSubscribes.getNames().add(artist.getUsername());
-                    user.setLastNotifiedTime(commandInput.getTimestamp());
-                    return user.getUsername() + " subscribed to " + artist.getUsername()
-                            + " successfully.";
+                    return user.performSubscribe(artist.getUsername(), timestamp);
                 }
             }
+
             for (Host host : getHosts()) {
                 if (user.getCurrentPage() == host.getPage()) {
-                    Subscribe userSubscribes = user.getSubscribes();
-                    List<String> names = userSubscribes.getNames();
-                    for (String name : names) {
-                        if (name.equals(host.getUsername())) {
-                            // we remove the name and the notifications relatet to it
-                            names.remove(name);
-                            List<Notification> notifications = userSubscribes.getNotifications();
-                            for (Notification notification : notifications) {
-                                if (notification.getDescription().contains(name)) {
-                                    notification.removeObserver(user.getListManager());
-                                    notification.notifyObservers();
-                                    //notifications.remove(notification);
-                                }
-                            }
-                            return user.getUsername() + " unsubscribed from " + host.getUsername()
-                                    + " successfully.";
-                        }
-                    }
-                    names.add(host.getUsername());
-                    user.setLastNotifiedTime(commandInput.getTimestamp());
-                    return user.getUsername() + " subscribed to " + host.getUsername()
-                            + " successfully.";
+                    return user.performSubscribe(host.getUsername(), timestamp);
                 }
             }
         }
@@ -1055,163 +1014,29 @@ public final class Admin {
         return merchNames;
     }
 
+    /**
+     * This method updates the user's list of recommendations
+     *
+     * @param commandInput the command input
+     * @return a message with the success of the operation
+     */
     public String updateRecommendations(final CommandInput commandInput) {
         User user = getUser(commandInput.getUsername());
 
         if (commandInput.getRecommendationType().equals("random_song")) {
-            // find the current song that the user is playing
-            String songName = user.getPlayer().getCurrentAudioFile().getName();
-            for (Song song : getSongs()) {
-                if (song.getName().equals(songName)) {
-                    int remainedTime = user.getPlayerStats().getRemainedTime();
-                    if (song.getDuration() - remainedTime >= minTimeThirty) {
-                        List<Song> sameGenreSongs = getSongs().stream()
-                                .filter(thisSong -> thisSong.getGenre().equals(song.getGenre()))
-                                .collect(Collectors.toList());
-
-                        if (!sameGenreSongs.isEmpty()) {
-                            // Generate a random index in the range [0, sameGenreSongs.size() - 1]
-                            int randomIndex = new Random(song.getDuration()
-                                    - remainedTime).nextInt(sameGenreSongs.size());
-
-                            // We choose the song corresponding to the randomly generated index.
-                            Song randomSong = sameGenreSongs.get(randomIndex);
-
-                            // we add the song in the songsRecommendations list of the user
-                            ArrayList<Song> userSongs = user.getSongsRecommendations();
-                            userSongs.add(randomSong);
-                            user.setSongsRecommendations(userSongs);
-                            user.setLastRecommendation(randomSong);
-                            user.setLastRecommendationType("song");
-                        }
-
-                        return "The recommendations for user " + user.getUsername() +
-                                " have been updated successfully.";
-                    }
-                }
-            }
+            user.updateRecommendationsRandomSong();
         }
         if (commandInput.getRecommendationType().equals("random_playlist")) {
-            // finding out the top 3 genres
-            List<Song> likedSongs = user.getLikedSongs();
-            List<Playlist> usersPlaylists = user.getPlaylists();
-            List<Playlist> followedPlaylists = user.getFollowedPlaylists();
-
-            // Creating the ArrayList with the names of the first 3 genres
-            Map<String, Integer> genreCountMap = new HashMap<>();
-
-            // Count genres in liked songs
-            countGenres(likedSongs, genreCountMap);
-
-            // Count genres in user's playlists
-            for (Playlist playlist : usersPlaylists) {
-                countGenres(playlist.getSongs(), genreCountMap);
-            }
-
-            // Count genres in followed playlists
-            for (Playlist playlist : followedPlaylists) {
-                countGenres(playlist.getSongs(), genreCountMap);
-            }
-
-            // Sort genres by count in descending order
-            List<Map.Entry<String, Integer>> sortedGenres =
-                    genreCountMap.entrySet().stream()
-                            .sorted(Comparator.comparingInt(Map.Entry::getValue))
-                            .limit(three)
-                            .toList();
-
-            // Extract genre names from the sorted list
-            List<String> topGenres = new ArrayList<>();
-            for (Map.Entry<String, Integer> entry : sortedGenres) {
-                topGenres.add(entry.getKey());
-            }
-
-            Map<String, List<Song>> topSongsByGenre = new HashMap<>();
-
-            for (String genre : topGenres) {
-                List<Song> songsByGenre = filterSongsByGenre(songs, genre);
-                List<Song> topSongs;
-
-                switch (topGenres.indexOf(genre)) {
-                    case 0:
-                        topSongs = songsByGenre.subList(0, Math.min(five, songsByGenre.size()));
-                        break;
-                    case 1:
-                        topSongs = songsByGenre.subList(0, Math.min(three, songsByGenre.size()));
-                        break;
-                    case 2:
-                        topSongs = songsByGenre.subList(0, Math.min(2, songsByGenre.size()));
-                        break;
-                    default:
-                        topSongs = new ArrayList<>();
-                }
-                topSongsByGenre.put(genre, topSongs);
-
-            }
-            user.createPlaylist(user.getUsername() + "'s recommendations",
-                    commandInput.getTimestamp());
-            Playlist newPlaylist = user.getPlaylists().get(user.getPlaylists().size() - 1);
-            for (List<Song> thisSongs : topSongsByGenre.values()) {
-                for (Song song : thisSongs) {
-                    newPlaylist.addSong(song);
-                }
-            }
-            ArrayList<Playlist> userPlaylists = user.getPlaylistsRecommendations();
-            userPlaylists.add(newPlaylist);
-            user.setPlaylistsRecommendations(userPlaylists);
-            user.setLastRecommendation(newPlaylist);
-            user.setLastRecommendationType("playlist");
-            return "The recommendations for user " + user.getUsername()
-                    + " have been updated successfully.";
+            user.updateRecommendationsRandomPlaylist(timestamp);
         }
         if (commandInput.getRecommendationType().equals("fans_playlist")) {
-            String songName = user.getPlayer().getCurrentAudioFile().getName();
-            String artistName = new String();
-            for (Song song : songs) {
-                if (song.getName().equals(songName)) {
-                    artistName = song.getArtist();
-                }
-            }
-            user.createPlaylist(artistName + " Fan Club recommendations",
-                    commandInput.getTimestamp());
-            Playlist newPlaylist = user.getPlaylists().get(user.getPlaylists().size() - 1);
-
-            ArrayList<Playlist> userPlaylists = user.getPlaylistsRecommendations();
-            userPlaylists.add(newPlaylist);
-            user.setPlaylistsRecommendations(userPlaylists);
-            user.setLastRecommendation(newPlaylist);
-            user.setLastRecommendationType("playlist");
-            return "The recommendations for user " + user.getUsername()
-                    + " have been updated successfully.";
+           user.updateRecommendationsFansPlaylist(timestamp);
         }
-        return null;
+        return "The recommendations for user " + user.getUsername() +
+                " have been updated successfully.";
 
     }
-    /**
-     * Counts the occurrences of each genre in a list of songs and updates the genre count map.
-     *
-     * @param songs the list of songs to be counted.
-     * @param genreCountMap the map to store the count of each genre.
-     */
-    private static void countGenres(final List<Song> songs, final Map<String, Integer> genreCountMap) {
-        for (Song song : songs) {
-            String genre = song.getGenre();
-            genreCountMap.put(genre, genreCountMap.getOrDefault(genre, 0) + 1);
-        }
-    }
 
-    /**
-     * Filters a list of songs based on the specified genre.
-     *
-     * @param songs The list of songs to be filtered.
-     * @param genre The genre to filter songs by.
-     * @return A list of songs belonging to the specified genre.
-     */
-    private static List<Song> filterSongsByGenre(final List<Song> songs, final String genre) {
-        return songs.stream()
-                .filter(song -> genre.equals(song.getGenre()))
-                .toList();
-    }
     /**
      * Moves the user to the previous page, updating the current index.
      *

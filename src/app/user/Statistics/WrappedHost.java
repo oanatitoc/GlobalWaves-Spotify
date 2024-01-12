@@ -1,6 +1,5 @@
 package app.user.Statistics;
 
-import app.user.Statistics.Infos.Infos;
 import lombok.Getter;
 import lombok.Setter;
 

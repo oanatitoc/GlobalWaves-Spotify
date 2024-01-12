@@ -18,7 +18,6 @@ import app.searchBar.Filters;
 import app.searchBar.SearchBar;
 import app.user.Entities.Merchandise;
 import app.user.Entities.Notifications.NotificationListManager;
-import app.user.Statistics.Infos.*;
 import app.utils.Enums;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -26,9 +25,7 @@ import fileio.input.CommandInput;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -141,6 +138,8 @@ public final class User extends UserAbstract {
     @Setter
     private AdBreak adBreak;
     private final int five = 5;
+    private final int minTimeThirty = 30;
+    private final int three = 3;
 
     /**
      * Instantiates a new User.
@@ -788,6 +787,201 @@ public final class User extends UserAbstract {
             currentIndex--;
             currentPage = pages.get(currentIndex);
         }
+    }
+
+
+    /**
+     * Performs subscription or unsubscription for a user to/from a specified name.
+     *
+     * @param name the name to subscribe or unsubscribe to/from.
+     * @param timestamp the current time
+     * @return A message indicating the success or failure of the subscription/unsubscription.
+     */
+    public String performSubscribe(final String name, final int timestamp) {
+        Subscribe userSubscribes = getSubscribes();
+
+        if (userSubscribes != null) {
+
+            if (userSubscribes.getNames().contains(name)) {
+                // Unsubscribe
+                userSubscribes.getNames().remove(name);
+
+                // Remove related notifications and notify observers
+                userSubscribes.getNotifications().stream()
+                        .filter(notification -> notification.getDescription()
+                                .contains(name))
+                        .forEach(notification -> {
+                            notification.removeObserver(getListManager());
+                            notification.notifyObservers();
+                        });
+                return getUsername() + " unsubscribed from " + name + " successfully.";
+            }
+            // Subscribe
+            userSubscribes.getNames().add(name);
+            setLastNotifiedTime(timestamp);
+            return getUsername() + " subscribed to " + name + " successfully.";
+        }
+        return null;
+    }
+
+    /**
+     * The method updates the recommendations with a random song generated on the basis of the
+     * current listening song
+     */
+    public void updateRecommendationsRandomSong() {
+        // Get the current song
+        Song song = (Song) player.getCurrentAudioFile();
+
+        // Get the remained time of the current song
+        int remainedTime = getPlayerStats().getRemainedTime();
+
+        // If the song has been listened more than 30 minutes then we generate a random song
+        if (song.getDuration() - remainedTime >= minTimeThirty) {
+
+            // Find the list of songs with the same genre as song
+            List<Song> sameGenreSongs = Admin.getInstance().getSongs().stream()
+                    .filter(thisSong -> thisSong.getGenre().equals(song.getGenre()))
+                    .toList();
+
+            if (!sameGenreSongs.isEmpty()) {
+                // Generate a random index in the range [0, sameGenreSongs.size() - 1]
+                int randomIndex = new Random(song.getDuration()
+                        - remainedTime).nextInt(sameGenreSongs.size());
+
+                // We choose the song corresponding to the randomly generated index.
+                Song randomSong = sameGenreSongs.get(randomIndex);
+
+                // we add the song in the songsRecommendations list of the user
+                ArrayList<Song> userSongs = getSongsRecommendations();
+                userSongs.add(randomSong);
+                setSongsRecommendations(userSongs);
+                setLastRecommendation(randomSong);
+                setLastRecommendationType("song");
+            }
+        }
+    }
+    /**
+     * Counts the occurrences of each genre in a list of songs and updates the genre count map.
+     *
+     * @param songs the list of songs to be counted.
+     * @param genreCountMap the map to store the count of each genre.
+     */
+    public static void countGenres(final List<Song> songs, final Map<String,
+            Integer> genreCountMap) {
+        for (Song song : songs) {
+            String genre = song.getGenre();
+            genreCountMap.put(genre, genreCountMap.getOrDefault(genre, 0) + 1);
+        }
+    }
+
+    /**
+     * Filters a list of songs based on the specified genre.
+     *
+     * @param songs The list of songs to be filtered.
+     * @param genre The genre to filter songs by.
+     * @return A list of songs belonging to the specified genre.
+     */
+    public static List<Song> filterSongsByGenre(final List<Song> songs, final String genre) {
+        return songs.stream()
+                .filter(song -> genre.equals(song.getGenre()))
+                .toList();
+    }
+    /**
+     * The method updates the recommendations with a random playlist
+     *
+     * @param timestamp the current time
+     */
+    public void updateRecommendationsRandomPlaylist(final int timestamp) {
+        // finding out the top 3 genres
+
+        List<Playlist> usersPlaylists = getPlaylists();
+
+        // Creating the ArrayList with the names of the first 3 genres
+        Map<String, Integer> genreCountMap = new HashMap<>();
+
+        // Count genres in liked songs
+        countGenres(likedSongs, genreCountMap);
+
+        // Count genres in user's playlists
+        for (Playlist playlist : usersPlaylists) {
+            countGenres(playlist.getSongs(), genreCountMap);
+        }
+
+        // Count genres in followed playlists
+        for (Playlist playlist : followedPlaylists) {
+            countGenres(playlist.getSongs(), genreCountMap);
+        }
+
+        // Sort genres by count in descending order
+        List<Map.Entry<String, Integer>> sortedGenres =
+                genreCountMap.entrySet().stream()
+                        .sorted(Comparator.comparingInt(Map.Entry::getValue))
+                        .limit(three)
+                        .toList();
+
+        // Extract genre names from the sorted list
+        List<String> topGenres = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : sortedGenres) {
+            topGenres.add(entry.getKey());
+        }
+
+        Map<String, List<Song>> topSongsByGenre = new HashMap<>();
+
+        for (String genre : topGenres) {
+            List<Song> songsByGenre = filterSongsByGenre(Admin.getInstance().getSongs(), genre);
+            List<Song> topSongs;
+
+            switch (topGenres.indexOf(genre)) {
+                case 0:
+                    topSongs = songsByGenre.subList(0, Math.min(five, songsByGenre.size()));
+                    break;
+                case 1:
+                    topSongs = songsByGenre.subList(0, Math.min(three, songsByGenre.size()));
+                    break;
+                case 2:
+                    topSongs = songsByGenre.subList(0, Math.min(2, songsByGenre.size()));
+                    break;
+                default:
+                    topSongs = new ArrayList<>();
+            }
+            topSongsByGenre.put(genre, topSongs);
+
+        }
+        createPlaylist(getUsername() + "'s recommendations", timestamp);
+        Playlist newPlaylist = getPlaylists().get(getPlaylists().size() - 1);
+        for (List<Song> thisSongs : topSongsByGenre.values()) {
+            for (Song song : thisSongs) {
+                newPlaylist.addSong(song);
+            }
+        }
+        ArrayList<Playlist> userPlaylists = getPlaylistsRecommendations();
+        userPlaylists.add(newPlaylist);
+        setPlaylistsRecommendations(userPlaylists);
+        setLastRecommendation(newPlaylist);
+        setLastRecommendationType("playlist");
+    }
+
+    /**
+     * This method creates a new playlist which is uploaded in the user's recommendation list
+     *
+     * @param timestamp the current time
+     */
+    public void updateRecommendationsFansPlaylist(final int timestamp) {
+        String songName = getPlayer().getCurrentAudioFile().getName();
+        String artistName = new String();
+        for (Song song : Admin.getInstance().getSongs()) {
+            if (song.getName().equals(songName)) {
+                artistName = song.getArtist();
+            }
+        }
+        createPlaylist(artistName + " Fan Club recommendations", timestamp);
+        Playlist newPlaylist = getPlaylists().get(getPlaylists().size() - 1);
+
+        ArrayList<Playlist> userPlaylists = getPlaylistsRecommendations();
+        userPlaylists.add(newPlaylist);
+        setPlaylistsRecommendations(userPlaylists);
+        setLastRecommendation(newPlaylist);
+        setLastRecommendationType("playlist");
     }
 
     /**
