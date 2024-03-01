@@ -89,15 +89,3 @@ The page navigation system is implemented by Command Design Pattern and the page
 
 
 
-### Where I used `chatGPT`
-- User.java :  public ObjectNode formattedStatisticsUser()
-    * I used chatGpt to find out if a user has accessed any datas (bool accessedData) which made my code better than previously when I implemented a lot of if/else sequences.
-- Admin.java : public public void updateSongsRevenues()
-    * I used chatGPT for the first part of the function when I wanted to calculate the songRevenue for each song from a user's songInfosPremium list. My previous
-    implementation was a long sequences of for and ifs where I iterated through all users, then I got their songInfos list, and the for each songInfo I called the
-    calucaleRevenueForSong function which made the code very hard to understand. The fact that we made the streams lab at school made me understand streams very well.
-    
-    * I used chatGPT to filter an artist's songs so that there are no duplicates (List < Song > distinctSongs). Before asking chatGPT, I started iterating through the list of songs and I tried to make another list with unique songs by name, but I think it is not what OOP want us to do, so I find this method offered by chatGPT quite useful.
-
-
-
